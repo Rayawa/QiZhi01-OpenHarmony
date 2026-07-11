@@ -1,0 +1,69 @@
+From 63f7505aedd03af02280b4619e4751041cfc038e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E6=9C=B1=E6=B4=AA=E7=91=9E?= <zhuhongrui8@huawei.com>
+Date: Thu, 27 Mar 2025 20:56:15 +0800
+Subject: [PATCH] set_selinux_adapter
+
+---
+ sepolicy/base/te/udevd.te                                    | 2 +-
+ .../drivers/peripheral/camera/vendor/camera_host.te          | 5 ++++-
+ sepolicy/ohos_policy/startup/init/system/ueventd.te          | 3 ++-
+ 3 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/sepolicy/base/te/udevd.te b/sepolicy/base/te/udevd.te
+index bea653cd3..4b34efd72 100644
+--- a/sepolicy/base/te/udevd.te
++++ b/sepolicy/base/te/udevd.te
+@@ -26,7 +26,7 @@ allow udevd data_file:dir { add_name create read remove_name watch write };
+ allow udevd data_file:file { ioctl read };
+ allow udevd data_file:sock_file { create unlink };
+ allow udevd data_udev:dir { add_name create getattr open read remove_name search watch write };
+-allow udevd data_udev:file { create ioctl open read rename unlink write write open };
++allow udevd data_udev:file { create ioctl open read rename unlink write write open getattr };
+ allow udevd data_udev:sock_file { create unlink };
+ allow udevd debug_param:file { map open read };
+ allow udevd default_param:file { map open read };
+diff --git a/sepolicy/ohos_policy/drivers/peripheral/camera/vendor/camera_host.te b/sepolicy/ohos_policy/drivers/peripheral/camera/vendor/camera_host.te
+index 75359e74f..ba7e1fb88 100644
+--- a/sepolicy/ohos_policy/drivers/peripheral/camera/vendor/camera_host.te
++++ b/sepolicy/ohos_policy/drivers/peripheral/camera/vendor/camera_host.te
+@@ -45,6 +45,9 @@ allow camera_host dev_rga:chr_file { ioctl open read write };
+ allow camera_host dev_unix_socket:dir { search };
+ allow camera_host dev_unix_socket:sock_file { write };
+ allow camera_host dev_video_file:chr_file { getattr ioctl map open read write };
++allow camera_host musl_param:file { read open };
++allow camera_host data_file:dir { search read open write };
++allow camera_host proc_version_file:file { getattr };
+ allow camera_host distributedsche_param:file { map open read };
+ allow camera_host faultloggerd:fd { use };
+ allow camera_host faultloggerd:unix_stream_socket { connectto };
+@@ -115,5 +118,5 @@ allowxperm camera_host dev_dri_file:chr_file ioctl { 0x641f 0x642d 0x642e 0x64b2
+ allowxperm camera_host dev_hdf_kevent:chr_file ioctl { 0x6201 0x6202 0x6203 };
+ allowxperm camera_host dev_mpp:chr_file ioctl { 0x7601 };
+ allowxperm camera_host dev_rga:chr_file ioctl { 0x5017 0x5019 0x601b };
+-allowxperm camera_host dev_video_file:chr_file ioctl { 0x5600 0x5605 0x5608 0x5609 0x560f 0x5611 0x5612 0x5613 0x561b 0x564a 0x5602 0x5624 0x564b 0x5625 0x5616 };
++allowxperm camera_host dev_video_file:chr_file ioctl { 0x5600 0x5602 0x5624 0x5625 0x561b 0x564a };
+ allowxperm camera_host hidumper_file:file ioctl 0x5413;
+diff --git a/sepolicy/ohos_policy/startup/init/system/ueventd.te b/sepolicy/ohos_policy/startup/init/system/ueventd.te
+index 82153708d..64865b89b 100644
+--- a/sepolicy/ohos_policy/startup/init/system/ueventd.te
++++ b/sepolicy/ohos_policy/startup/init/system/ueventd.te
+@@ -114,7 +114,7 @@ allow ueventd dev_unix_socket:dir { search };
+ allow ueventd dev_vcs_file:chr_file { relabelto };
+ allow ueventd dev_v_file:chr_file { relabelto };
+ allow ueventd dev_vhci_file:chr_file { relabelto };
+-allow ueventd dev_video_file:chr_file { relabelto };
++allow ueventd dev_video_file:chr_file { unlink getattr setattr relabelto };
+ allow ueventd dev_vndbinder_file:chr_file { relabelto };
+ allow ueventd dev_watchdog_file:chr_file { relabelto };
+ allow ueventd dev_zero_file:chr_file { relabelto };
+@@ -165,6 +165,7 @@ allow ueventd vendor_etc_file:dir { search };
+ allow ueventd init:unix_dgram_socket { read write };
+ allow ueventd paramservice_socket:sock_file { write };
+ allow ueventd kernel:unix_stream_socket { connectto };
++allow ueventd musl_param:file { read };
+ allow ueventd dev_block_file:blk_file { relabelfrom };
+ allow ueventd dev_block_file:lnk_file { relabelfrom getattr };
+ allow ueventd dev_block_file:dir { open read };
+-- 
+2.47.1.windows.1
+

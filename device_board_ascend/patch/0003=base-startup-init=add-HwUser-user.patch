@@ -1,0 +1,37 @@
+From b5731c858d1f0f6b50867ffdfa934b686964625d Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 10 Jul 2025 16:31:52 +0800
+Subject: [PATCH] add HwUser user
+
+---
+ services/etc/group  | 4 ++++
+ services/etc/passwd | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/services/etc/group b/services/etc/group
+index b2cc05aa..a14fe32e 100644
+--- a/services/etc/group
++++ b/services/etc/group
+@@ -168,3 +168,7 @@ app_domain_verify:x:3111:
+ compiler_service:x:5300:
+ sandbox_manager:x:3076:
+ app_fwk_update:x:3350:
++HwHiAiUser:x:8000:HwDmUser,HwBaseUser:
++HwSysUser:x:8100:
++HwDmUser:x:8101:HwHiAiUser:
++HwBaseUser:x:8102:HwDmUser,HwHiAiUser:
+diff --git a/services/etc/passwd b/services/etc/passwd
+index 9ce0ebf9..3cb7fe77 100644
+--- a/services/etc/passwd
++++ b/services/etc/passwd
+@@ -162,3 +162,7 @@ app_domain_verify:x:3111:3111:::/bin/false
+ compiler_service:x:5300:5300:::/bin/false
+ sandbox_manager:x:3076:3076:::/bin/false
+ app_fwk_update:x:3350:3350:::/bin/false
++HwHiAiUser:x:8000:8000::/home/HwHiAiUser:/bin/sh
++HwSysUser:x:8100:8100::/home/HwSysUser:/sbin/nologin
++HwDmUser:x:8101:8101::/home/HwDmUser:/sbin/nologin
++HwBaseUser:x:8102:8102::/home/HwBaseUser:/sbin/nologin
+-- 
+2.47.1.windows.1
+

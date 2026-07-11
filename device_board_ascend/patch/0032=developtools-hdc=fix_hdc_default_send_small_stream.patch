@@ -1,0 +1,38 @@
+From ff675e8460a549e4bec6aa49090ea01de34599cd Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 22 May 2025 14:50:01 +0800
+Subject: [PATCH] fix hdc default send small stream
+
+---
+ src/common/session.cpp  | 1 +
+ src/common/transfer.cpp | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/common/session.cpp b/src/common/session.cpp
+index a83ea8d9..121f5dcf 100644
+--- a/src/common/session.cpp
++++ b/src/common/session.cpp
+@@ -1395,6 +1395,7 @@ bool HdcSessionBase::DispatchTaskData(HSession hSession, const uint32_t channelI
+             hTaskInfo->closeRetryCount = 0;
+             hTaskInfo->channelTask = false;
+             hTaskInfo->isCleared = false;
++            hTaskInfo->isStableBuf = 1;
+ 
+             int addTaskRetry = 3; // try 3 time
+             while (addTaskRetry > 0) {
+diff --git a/src/common/transfer.cpp b/src/common/transfer.cpp
+index a10c3b21..b324577d 100644
+--- a/src/common/transfer.cpp
++++ b/src/common/transfer.cpp
+@@ -31,7 +31,7 @@ HdcTransferBase::HdcTransferBase(HTaskInfo hTaskInfo)
+     ResetCtx(&ctxNow, true);
+     commandBegin = 0;
+     commandData = 0;
+-    isStableBuf = false;
++    isStableBuf = true;
+ }
+ 
+ HdcTransferBase::~HdcTransferBase()
+-- 
+2.47.1.windows.1
+

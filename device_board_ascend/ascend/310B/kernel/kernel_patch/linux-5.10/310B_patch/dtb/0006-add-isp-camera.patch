@@ -1,0 +1,72 @@
+From 52b8b229bc01bfc17b4eda716d8294a5f882192f Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 15:03:28 +0800
+Subject: [PATCH] add isp camera
+
+---
+ .../hi1910b/hi1910BL/base/hi1910B-isp.dtsi    | 14 ++++++++++
+ dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts  | 27 +++++++++++++++++++
+ 2 files changed, 41 insertions(+)
+
+diff --git a/dtb/dts/hi1910b/hi1910BL/base/hi1910B-isp.dtsi b/dtb/dts/hi1910b/hi1910BL/base/hi1910B-isp.dtsi
+index 9597b74..e1fcd56 100644
+--- a/dtb/dts/hi1910b/hi1910BL/base/hi1910B-isp.dtsi
++++ b/dtb/dts/hi1910b/hi1910BL/base/hi1910B-isp.dtsi
+@@ -67,4 +67,18 @@ media {
+         interrupts = <0x33E 0x4>;
+         smmuflag = <0x0>;
+        };
++
++    vin_hw:vin_hw {
++        compatible = "vin,vin_hw";
++        vin,mipi = <&mipi_rx>;
++        vin,vi = <&vi>;
++        vin,isp = <&isp>;
++        status = "ok";
++       };
++
++    isp_vir0:isp_vir0 {
++        compatible = "vin,isp-vir";
++        vin,hw = <&vin_hw>;
++        status = "ok";
++       };
+ };
+\ No newline at end of file
+diff --git a/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts b/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts
+index d2a1df7..2900614 100755
+--- a/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts
++++ b/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts
+@@ -145,3 +145,30 @@
+         };
+ };
+ 
++&isp_vir0 {
++    status = "okay";
++	port {
++		isp_sensor_in:endpoint {
++			remote-endpoint = <&imx219_out>;
++			bus-type = <4>;
++		};
++	};
++};
++
++&i2c0_isp {
++	status = "okay";
++	camera0:imx219@10 {
++		compatible = "sony,imx219";
++		reg = <0x10>;
++		//clocks = <&ext_cam_clk>;
++		status = "okay";
++		port {
++			imx219_out:endpoint {
++				remote-endpoint = <&isp_sensor_in>;
++				link-frequencies = /bits/ 64 <456000000>;
++				bus-type = <4>;
++				data-lanes = <1 2>;
++			};
++		};
++	};
++};
+-- 
+2.47.1.windows.1
+

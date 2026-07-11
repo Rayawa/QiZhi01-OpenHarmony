@@ -1,0 +1,24 @@
+From c4e7cd4c5aa3962c8347ea78865d9bd0512b6b55 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Fri, 10 Oct 2025 17:45:01 +0800
+Subject: [PATCH] add OnCameraStatus update CameraId
+
+---
+ camera/vdi_base/v4l2/src/camera_host/camera_host_vdi_impl.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/camera/vdi_base/v4l2/src/camera_host/camera_host_vdi_impl.cpp b/camera/vdi_base/v4l2/src/camera_host/camera_host_vdi_impl.cpp
+index f6112ccf2..cdd4b6f35 100644
+--- a/camera/vdi_base/v4l2/src/camera_host/camera_host_vdi_impl.cpp
++++ b/camera/vdi_base/v4l2/src/camera_host/camera_host_vdi_impl.cpp
+@@ -390,6 +390,7 @@ void CameraHostVdiImpl::OnCameraStatus(CameraId cameraId,
+ 
+     if (status == AVAILABLE) {
+         RetCode rc = RC_OK;
++        config->ReadConfigFile();
+         std::string logicalCameraId = config->ReturnLogicalCameraIdToString(physicalCameraId);
+         if (logicalCameraId == "") {
+             logicalCameraId = config->ReturnEnableLogicalCameraId();
+-- 
+2.47.1.windows.1
+

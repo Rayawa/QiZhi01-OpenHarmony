@@ -1,0 +1,36 @@
+From 68916125d8f7d9a01607679ce5c90896eac688f6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E6=9C=B1=E6=B4=AA=E7=91=9E?= <zhuhongrui8@huawei.com>
+Date: Fri, 28 Mar 2025 08:53:33 +0800
+Subject: [PATCH] modify_CameraStatus_enum
+
+---
+ camera/v1_0/Types.idl | 13 ++++---------
+ 1 file changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/camera/v1_0/Types.idl b/camera/v1_0/Types.idl
+index b1af830..c5f8e82 100644
+--- a/camera/v1_0/Types.idl
++++ b/camera/v1_0/Types.idl
+@@ -181,15 +181,10 @@ enum StreamSupportType {
+  * @brief Enumerates camera device statuses.
+  */
+ enum CameraStatus {
+-    /**
+-     * The camera device is not in position or is unavailable.
+-     */
+-    UN_AVAILABLE = 0,
+-
+-    /**
+-     * The camera device is available.
+-     */
+-    AVAILABLE = 1,
++    APPEAR = 0,
++    DISAPPEAR = 1,
++    AVAILABLE = 2,
++    UN_AVAILABLE = 3,
+ };
+ 
+ /**
+-- 
+2.47.1.windows.1
+

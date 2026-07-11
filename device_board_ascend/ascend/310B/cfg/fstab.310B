@@ -1,0 +1,5 @@
+# fstab file.
+#<src>                                                  <mnt_point> <type>    <mnt_flags and options>                              <fs_mgr_flags>
+/dev/block/platform/82010000.sdhci1/by-name/p2               /       ext4     ro,barrier=1  wait,required
+/dev/block/platform/82010000.sdhci1/by-name/p4              /vendor        ext4     ro,barrier=1  wait,required
+/dev/block/platform/82010000.sdhci1/by-name/p5               /data       f2fs     discard,noatime,nosuid,nodev,fscrypt=2:aes-256-cts:aes-256-xts,usrquota  wait,check,fileencryption=software,quota

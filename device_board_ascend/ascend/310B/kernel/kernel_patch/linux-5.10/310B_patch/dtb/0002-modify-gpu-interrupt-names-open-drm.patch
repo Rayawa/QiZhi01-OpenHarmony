@@ -1,0 +1,39 @@
+From e6c1d672c2628d52df569d71383d2b731ab73f06 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 16:51:06 +0800
+Subject: [PATCH] modify gpu interrupt-names open drm
+
+---
+ dtb/dts/hi1910b/hi1910BL/base/hi1910B-gpu.dtsi | 2 +-
+ dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts   | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/dtb/dts/hi1910b/hi1910BL/base/hi1910B-gpu.dtsi b/dtb/dts/hi1910b/hi1910BL/base/hi1910B-gpu.dtsi
+index 311c611..7882105 100644
+--- a/dtb/dts/hi1910b/hi1910BL/base/hi1910B-gpu.dtsi
++++ b/dtb/dts/hi1910b/hi1910BL/base/hi1910B-gpu.dtsi
+@@ -8,6 +8,6 @@
+         reg = <0x4 0x4000000 0x0 0x4000>;
+         interrupt-parent = <&mbigen_gpu>;
+         interrupts = <0x2ec 0x4 0x2ed 0x4 0x2ee 0x4>;
+-        interrupt-names = "JOB", "MMU", "GPU";
++        interrupt-names = "job", "mmu", "gpu";
+         physical-memory-group-manager = <&caf_memory_manager>;
+     };
+diff --git a/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts b/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts
+index 7e5df7b..d2a1df7 100755
+--- a/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts
++++ b/dtb/dts/hi1910b/hi1910BL/hi1910B-default.dts
+@@ -26,7 +26,8 @@
+ 	/include/ "base/hi1910B-hdmi.dtsi"
+ 	/include/ "product/hi1910B-audio.dtsi"
+ 	/include/ "base/hi1910B-mipitx.dtsi"
+-	/include/ "base/hi1910B-vdp.dtsi"
++	// /include/ "base/hi1910B-vdp.dtsi"
++   /include/ "base/hi1910B-drm.dtsi"
+ 	/include/ "base/hi1910B-isp.dtsi"
+ 	/include/ "base/hi1910B-hilink.dtsi"
+ 	/include/ "base/hi1910B-mntn-milanr3.dtsi"
+-- 
+2.47.1.windows.1
+

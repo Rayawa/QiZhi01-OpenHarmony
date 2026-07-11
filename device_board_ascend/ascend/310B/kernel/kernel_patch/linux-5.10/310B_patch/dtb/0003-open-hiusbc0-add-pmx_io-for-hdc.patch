@@ -1,0 +1,55 @@
+From f645f2d9cd104a75597f859f795a634d40c23caa Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 16:57:37 +0800
+Subject: [PATCH] open hiusbc0 add pmx_io for hdc
+
+---
+ .../hi1910b/hi1910BL/product/hi1910B-hiusbc-B51.dtsi |  7 ++++---
+ .../hi1910BL/product/hi1910B-pinctrl-M100-B51.dtsi   | 12 ++++++++++++
+ 2 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/dtb/dts/hi1910b/hi1910BL/product/hi1910B-hiusbc-B51.dtsi b/dtb/dts/hi1910b/hi1910BL/product/hi1910B-hiusbc-B51.dtsi
+index 1653523..63d2da3 100755
+--- a/dtb/dts/hi1910b/hi1910BL/product/hi1910B-hiusbc-B51.dtsi
++++ b/dtb/dts/hi1910b/hi1910BL/product/hi1910B-hiusbc-B51.dtsi
+@@ -1,4 +1,4 @@
+-/*
++
+ hiusbc0@A5000000 {
+     compatible = "hisilicon,hiusbc";
+     reg = <0x0 0xA5000000 0x0 0x80000>;    // USB_CTRL0 BASE
+@@ -11,8 +11,9 @@ hiusbc0@A5000000 {
+     u2-only = <0>;
+     io-subctrl-base = <0x0 0xA0120000 0x0 0x10000>;
+     pcs-base = <0x0 0xA0800000 0x0 0x100>;
+-}
+-*/
++    pinctrl-names = "default";
++    pinctrl-0 = <&iomg048_io_pmx_func>;
++};
+ 
+ 
+ hiusbc1@A5080000 {
+diff --git a/dtb/dts/hi1910b/hi1910BL/product/hi1910B-pinctrl-M100-B51.dtsi b/dtb/dts/hi1910b/hi1910BL/product/hi1910B-pinctrl-M100-B51.dtsi
+index afbe23c..0756b63 100755
+--- a/dtb/dts/hi1910b/hi1910BL/product/hi1910B-pinctrl-M100-B51.dtsi
++++ b/dtb/dts/hi1910b/hi1910BL/product/hi1910B-pinctrl-M100-B51.dtsi
+@@ -440,3 +440,15 @@
+ 			pinctrl-single,pins = <0x4C    0x00>;
+ 		};
+ 	};
++
++    pmx_io: pinmux@A0140000 {
++		compatible = "pinctrl-single", "pinctrl-single1";
++		reg = <0x00 0xA0140000 0x0 0xCC>;
++		#gpio-range-cells = <3>;
++		pinctrl-single,register-width = <32>;
++		pinctrl-single,function-mask = <7>;
++
++		iomg048_io_pmx_func: iomg048_pmx_func {
++			pinctrl-single,pins = <0xC0    0x2>;
++		};
++	};
+-- 
+2.47.1.windows.1
+

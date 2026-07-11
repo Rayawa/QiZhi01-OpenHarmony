@@ -1,0 +1,25 @@
+From 2d9412dab9a5fe22055f0009b8ced7dc1a9d60bf Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 14:06:01 +0800
+Subject: [PATCH] add powermgr time
+
+---
+ services/native/profile/power_mode_config.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/services/native/profile/power_mode_config.xml b/services/native/profile/power_mode_config.xml
+index c801bac6..4330562f 100644
+--- a/services/native/profile/power_mode_config.xml
++++ b/services/native/profile/power_mode_config.xml
+@@ -32,7 +32,7 @@
+ -->
+ <switch_proxy version="1">
+     <proxy id="600">
+-        <switch id="101" value="30000" recover_flag="0"/>
++        <switch id="101" value="300000000" recover_flag="0"/>
+         <switch id="102" value="0" recover_flag="0"/>
+         <switch id="103" value="-1" recover_flag="0"/>
+         <switch id="107" value="1" recover_flag="0"/>
+-- 
+2.47.1.windows.1
+

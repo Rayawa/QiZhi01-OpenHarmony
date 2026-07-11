@@ -1,0 +1,172 @@
+From 7f63474f776f4fba0c76811d979c4694fdda765e Mon Sep 17 00:00:00 2001
+From: lichao1204 <1140971378@qq.com>
+Date: Wed, 30 Apr 2025 11:45:25 +0800
+Subject: [PATCH] =?UTF-8?q?hdi=5Fsink=E5=85=B3=E9=97=AD=E9=9F=B3=E6=95=88?=
+ =?UTF-8?q?=E5=92=8C=E9=9F=B3=E9=A2=91=E6=95=B0=E6=8D=AE=E4=BF=AE=E6=94=B9?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../native/pulseaudio/modules/hdi/hdi_sink.c  | 102 ++----------------
+ 1 file changed, 7 insertions(+), 95 deletions(-)
+
+diff --git a/frameworks/native/pulseaudio/modules/hdi/hdi_sink.c b/frameworks/native/pulseaudio/modules/hdi/hdi_sink.c
+index 939719ff8..65c0db207 100644
+--- a/frameworks/native/pulseaudio/modules/hdi/hdi_sink.c
++++ b/frameworks/native/pulseaudio/modules/hdi/hdi_sink.c
+@@ -194,12 +194,7 @@ static uint32_t Read24Bit(const uint8_t *p)
+     return ((uint32_t) p[BIT_DEPTH_TWO] << BIT_16) | ((uint32_t) p[1] << BIT_8) | ((uint32_t) p[0]);
+ }
+ 
+-static void Write24Bit(uint8_t *p, uint32_t u)
+-{
+-    p[BIT_DEPTH_TWO] = (uint8_t) (u >> BIT_16);
+-    p[1] = (uint8_t) (u >> BIT_8);
+-    p[0] = (uint8_t) u;
+-}
++
+ 
+ static void ConvertFrom16BitToFloat(unsigned n, const int16_t *a, float *b)
+ {
+@@ -225,44 +220,13 @@ static void ConvertFrom32BitToFloat(unsigned n, const int32_t *a, float *b)
+     }
+ }
+ 
+-static float CapMax(float v)
+-{
+-    float value = v;
+-    if (v > 1.0f) {
+-        value = 1.0f - FLOAT_EPS;
+-    } else if (v < -1.0f) {
+-        value = -1.0f + FLOAT_EPS;
+-    }
+-    return value;
+-}
+ 
+-static void ConvertFromFloatTo16Bit(unsigned n, const float *a, int16_t *b)
+-{
+-    for (; n > 0; n--) {
+-        float tmp = *a++;
+-        float v = CapMax(tmp) * (1 << (BIT_16 - 1));
+-        *(b++) = (int16_t) v;
+-    }
+-}
+ 
+-static void ConvertFromFloatTo24Bit(unsigned n, const float *a, uint8_t *b)
+-{
+-    for (; n > 0; n--) {
+-        float tmp = *a++;
+-        float v = CapMax(tmp) * (1U << (BIT_32 - 1));
+-        Write24Bit(b, ((int32_t) v) >> BIT_8);
+-        b += OFFSET_BIT_24;
+-    }
+-}
+ 
+-static void ConvertFromFloatTo32Bit(unsigned n, const float *a, int32_t *b)
+-{
+-    for (; n > 0; n--) {
+-        float tmp = *a++;
+-        float v = CapMax(tmp) * (1U << (BIT_32 - 1));
+-        *(b++) = (int32_t) v;
+-    }
+-}
++
++
++
++
+ 
+ static void ConvertToFloat(pa_sample_format_t format, unsigned n, void *src, float *dst)
+ {
+@@ -291,32 +255,7 @@ static void ConvertToFloat(pa_sample_format_t format, unsigned n, void *src, flo
+     }
+ }
+ 
+-static void ConvertFromFloat(pa_sample_format_t format, unsigned n, float *src, void *dst)
+-{
+-    pa_assert(src);
+-    pa_assert(dst);
+-    int32_t ret;
+-    switch (format) {
+-        case PA_SAMPLE_S16LE:
+-            ConvertFromFloatTo16Bit(n, src, dst);
+-            break;
+-        case PA_SAMPLE_S24LE:
+-            ConvertFromFloatTo24Bit(n, src, dst);
+-            break;
+-        case PA_SAMPLE_S32LE:
+-            ConvertFromFloatTo32Bit(n, src, dst);
+-            break;
+-        default:
+-            ret = memcpy_s(dst, n, src, n);
+-            if (ret != 0) {
+-                float *dstFloat = (float *)dst;
+-                for (uint32_t i = 0; i < n; i++) {
+-                    dstFloat[i] = src[i];
+-                }
+-            }
+-            break;
+-    }
+-}
++
+ 
+ static void updateResampler(pa_sink_input *sinkIn, const char *sceneType, bool mchFlag)
+ {
+@@ -1275,14 +1214,12 @@ static unsigned SinkRenderPrimaryCluster(pa_sink *si, size_t *length, pa_mix_inf
+         } else if ((sceneTypeFlag && existFlag) || (pa_safe_streq(sceneType, "EFFECT_NONE") && (!existFlag))) {
+             RecordEffectChainStatus(existFlag, sSceneType, sSceneMode, u->actualSpatializationEnabled);
+             pa_sink_input_assert_ref(sinkIn);
+-            updateResampler(sinkIn, sceneType, false);
+ 
+             AUTO_CTRACE("hdi_sink::PrimaryCluster:%u len:%zu", sinkIn->index, *length);
+             pa_sink_input_peek(sinkIn, *length, &infoIn->chunk, &infoIn->volume);
+ 
+             if (mixlength == 0 || infoIn->chunk.length < mixlength) {mixlength = infoIn->chunk.length;}
+ 
+-            ProcessAudioVolume(sinkIn, mixlength, &infoIn->chunk, si);
+ 
+             if (pa_memblock_is_silence(infoIn->chunk.memblock) && sinkIn->thread_info.state == PA_SINK_INPUT_RUNNING) {
+                 AUTO_CTRACE("hdi_sink::PrimaryCluster::is_silence");
+@@ -1605,38 +1542,13 @@ static void PrepareSpatializationFading(int8_t *fadingState, int8_t *fadingCount
+     }
+ }
+ 
+-static void DoSpatializationFading(float *buf, int8_t fadingState, int8_t *fadingCount, int32_t frameLen,
+-    int32_t channels)
+-{
+-    // no need fading
+-    if (fadingState == 0) {
+-        return;
+-    }
+-    // fading out when fadingState equals -1, fading in when fadingState equals 1;
+-    for (int32_t i = 0; i < frameLen; i++) {
+-        for (int32_t j = 0; j < channels; j++) {
+-            buf[i * channels + j] *=
+-                ((*fadingCount) * frameLen + i * fadingState) / (float)(SPATIALIZATION_FADING_FRAMECOUNT * frameLen);
+-        }
+-    }
+-    (*fadingCount) += fadingState;
+-}
++
+ 
+ static void SinkRenderPrimaryAfterProcess(pa_sink *si, size_t length, pa_memchunk *chunkIn)
+ {
+-    struct Userdata *u;
+-    pa_assert_se(u = si->userdata);
+-    int32_t bitSize = (int32_t)pa_sample_size_of_format(u->format);
+-    u->bufferAttr->numChanIn = DEFAULT_IN_CHANNEL_NUM;
+-    void *dst = pa_memblock_acquire_chunk(chunkIn);
+-    int32_t frameLen = bitSize > 0 ? ((int32_t)length / bitSize) : 0;
+-    DoSpatializationFading(u->bufferAttr->tempBufOut, u->spatializationFadingState, &u->spatializationFadingCount,
+-        frameLen / DEFAULT_IN_CHANNEL_NUM, DEFAULT_IN_CHANNEL_NUM);
+-    ConvertFromFloat(u->format, frameLen, u->bufferAttr->tempBufOut, dst);
+ 
+     chunkIn->index = 0;
+     chunkIn->length = length;
+-    pa_memblock_release(chunkIn->memblock);
+ }
+ 
+ static char *HandleSinkSceneType(struct Userdata *u, time_t currentTime, int32_t i)
+-- 
+2.47.0.windows.2
+

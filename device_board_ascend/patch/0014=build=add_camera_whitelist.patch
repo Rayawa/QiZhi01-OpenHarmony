@@ -1,0 +1,75 @@
+From 395aa33961d96c81fb72e44e58b9526c321e84b4 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 18 Jun 2025 11:03:21 +0800
+Subject: [PATCH] add camera whitelist
+
+---
+ compile_standard_whitelist.json | 19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/compile_standard_whitelist.json b/compile_standard_whitelist.json
+index ee3c6d84..a3520e0a 100644
+--- a/compile_standard_whitelist.json
++++ b/compile_standard_whitelist.json
+@@ -1,12 +1,14 @@
+ {
+     "bundle_subsystem_error": [
+         "device/board/hihope/rk3568/ohos.build",
++        "device/board/ascend/310B/ohos.build",
+         "device/board/hisilicon/hispark_taurus/linux/ohos.build",
+         "device/board/hisilicon/hispark_taurus/ohos.build",
+         "device/qemu/arm_virt/linux/ohos.build",
+         "third_party/flutter/glfw/bundle.json",
+         "vendor/hihope/rk3568/ohos.build",
+-        "vendor/hihope/ipcamera/ohos.build"
++        "vendor/hihope/ipcamera/ohos.build",
++        "vendor/ascend/310B/ohos.build"
+     ],
+     "subsystem_components": [],
+     "gn_part_or_subsystem_error": [
+@@ -29,6 +31,12 @@
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/device_manager:camera_device_manager",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/driver_adapter:camera_v4l2_adapter",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/metadata_manager:camera_metadata_manager",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/pipeline_core:camera_ipp_algo_example",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/pipeline_core:camera_pipeline_core",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2:camera_host_vdi_impl_1.0",
+         "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
+         "//device/soc/ascend/310B/hardware/display:display_gfx",
+         "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vdi_impl",
+@@ -127,6 +135,8 @@
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/pipeline_core:camera_pipeline_core",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2:camera_host_vdi_impl_1.0",
+         "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
+         "//device/soc/ascend/310B/hardware/display:display_gfx",
+         "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vdi_impl",
+@@ -422,6 +432,12 @@
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/device_manager:camera_device_manager",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/driver_adapter:camera_v4l2_adapter",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/metadata_manager:camera_metadata_manager",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/pipeline_core:camera_ipp_algo_example",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/pipeline_core:camera_pipeline_core",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2:camera_host_vdi_impl_1.0",
+         "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
+         "//device/soc/ascend/310B/hardware/display:display_gfx",
+         "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vdi_impl",
+@@ -478,6 +494,7 @@
+         "//device/soc/rockchip/rk3568/hardware/display:display_composer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libhigbm_vendor",
++        "//device/board/ascend/310B/camera/vdi_impl/v4l2/pipeline_core:camera_pipeline_core",
+         "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
+         "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/ascend/310B/hardware/display:libhigbm_vendor",
+-- 
+2.47.1.windows.1
+

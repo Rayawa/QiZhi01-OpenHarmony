@@ -1,0 +1,103 @@
+From ef4c770f5878e414587bc19b33f89d1ca180ba2e Mon Sep 17 00:00:00 2001
+From: zhaoxin214 <zhaoxin214@huawei.com>
+Date: Tue, 6 Jan 2026 02:44:15 +0000
+Subject: [PATCH] fix egl function by eglGetProcAddress
+
+---
+ frameworks/opengl_wrapper/src/EGL/egl.cpp           | 13 +++++++++++++
+ frameworks/surfaceimage/src/surface_image.cpp       | 13 +++++++++++++
+ .../src/pixel_map_from_surface.cpp                  |  5 +++++
+ .../src/pipeline/rs_draw_cmd.cpp                    | 13 +++++++++++++
+ 4 files changed, 44 insertions(+)
+
+diff --git a/frameworks/opengl_wrapper/src/EGL/egl.cpp b/frameworks/opengl_wrapper/src/EGL/egl.cpp
+index e2314de9c8..9a14aaf27d 100644
+--- a/frameworks/opengl_wrapper/src/EGL/egl.cpp
++++ b/frameworks/opengl_wrapper/src/EGL/egl.cpp
+@@ -66,6 +66,19 @@ pthread_key_t GetHookTableKey()
+ }
+ 
+ namespace OHOS {
++static auto eglCreateSyncKHR = reinterpret_cast<PFNEGLCREATESYNCKHRPROC>(
++        eglGetProcAddress("eglCreateSyncKHR"));
++static auto eglDestroySyncKHR = reinterpret_cast<PFNEGLDESTROYSYNCKHRPROC>(
++        eglGetProcAddress("eglDestroySyncKHR"));
++static auto eglClientWaitSyncKHR = reinterpret_cast<PFNEGLCLIENTWAITSYNCKHRPROC>(
++        eglGetProcAddress("eglClientWaitSyncKHR"));
++static auto eglWaitSyncKHR = reinterpret_cast<PFNEGLWAITSYNCKHRPROC>(
++        eglGetProcAddress("eglWaitSyncKHR"));
++static auto eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(
++        eglGetProcAddress("eglCreateImageKHR"));
++static auto eglDestroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(
++        eglGetProcAddress("eglDestroyImageKHR"));
++
+ const std::map<std::string, EglWrapperFuncPointer> gExtensionMap = {
+     { "eglLockSurfaceKHR", (EglWrapperFuncPointer)&eglLockSurfaceKHR },
+     { "eglUnlockSurfaceKHR", (EglWrapperFuncPointer)&eglUnlockSurfaceKHR },
+diff --git a/frameworks/surfaceimage/src/surface_image.cpp b/frameworks/surfaceimage/src/surface_image.cpp
+index 8c803397d9..1b0d25d9a7 100644
+--- a/frameworks/surfaceimage/src/surface_image.cpp
++++ b/frameworks/surfaceimage/src/surface_image.cpp
+@@ -37,6 +37,19 @@
+ using namespace OHOS::HDI::Display::Graphic::Common::V1_0;
+ 
+ namespace OHOS {
++static auto glEGLImageTargetTexture2DOES = reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
++        eglGetProcAddress("glEGLImageTargetTexture2DOES"));
++static auto eglCreateSyncKHR = reinterpret_cast<PFNEGLCREATESYNCKHRPROC>(
++        eglGetProcAddress("eglCreateSyncKHR"));
++static auto eglDestroySyncKHR = reinterpret_cast<PFNEGLDESTROYSYNCKHRPROC>(
++        eglGetProcAddress("eglDestroySyncKHR"));
++static auto eglDupNativeFenceFDANDROID = reinterpret_cast<PFNEGLDUPNATIVEFENCEFDANDROIDPROC>(
++        eglGetProcAddress("eglDupNativeFenceFDANDROID"));
++static auto eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(
++        eglGetProcAddress("eglCreateImageKHR"));
++static auto eglDestroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(
++        eglGetProcAddress("eglDestroyImageKHR"));
++
+ namespace {
+ // Get a uniqueID in a process
+ static int GetProcessUniqueId()
+diff --git a/rosen/modules/create_pixelmap_surface/src/pixel_map_from_surface.cpp b/rosen/modules/create_pixelmap_surface/src/pixel_map_from_surface.cpp
+index cc0a02f885..b9a71a4212 100644
+--- a/rosen/modules/create_pixelmap_surface/src/pixel_map_from_surface.cpp
++++ b/rosen/modules/create_pixelmap_surface/src/pixel_map_from_surface.cpp
+@@ -60,6 +60,11 @@ namespace OHOS {
+ namespace Rosen {
+ using namespace OHOS::Media;
+ 
++static auto eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(
++        eglGetProcAddress("eglCreateImageKHR"));
++static auto eglDestroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(
++        eglGetProcAddress("eglDestroyImageKHR"));
++
+ static sptr<SurfaceBuffer> LocalDmaMemAlloc(const uint32_t &width, const uint32_t &height,
+     const std::unique_ptr<Media::PixelMap>& pixelmap)
+ {
+diff --git a/rosen/modules/render_service_base/src/pipeline/rs_draw_cmd.cpp b/rosen/modules/render_service_base/src/pipeline/rs_draw_cmd.cpp
+index c679a363dd..bb8f3f1519 100644
+--- a/rosen/modules/render_service_base/src/pipeline/rs_draw_cmd.cpp
++++ b/rosen/modules/render_service_base/src/pipeline/rs_draw_cmd.cpp
+@@ -40,6 +40,19 @@
+ 
+ namespace OHOS {
+ namespace Rosen {
++static auto glEGLImageTargetTexture2DOES = reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
++        eglGetProcAddress("glEGLImageTargetTexture2DOES"));
++static auto eglCreateSyncKHR = reinterpret_cast<PFNEGLCREATESYNCKHRPROC>(
++        eglGetProcAddress("eglCreateSyncKHR"));
++static auto eglDestroySyncKHR = reinterpret_cast<PFNEGLDESTROYSYNCKHRPROC>(
++        eglGetProcAddress("eglDestroySyncKHR"));
++static auto eglDupNativeFenceFDANDROID = reinterpret_cast<PFNEGLDUPNATIVEFENCEFDANDROIDPROC>(
++        eglGetProcAddress("eglDupNativeFenceFDANDROID"));
++static auto eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(
++        eglGetProcAddress("eglCreateImageKHR"));
++static auto eglDestroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(
++        eglGetProcAddress("eglDestroyImageKHR"));
++
+ constexpr int32_t CORNER_SIZE = 4;
+ #ifdef ROSEN_OHOS
+ constexpr uint32_t FENCE_WAIT_TIME = 3000; // ms
+-- 
+2.25.1
+

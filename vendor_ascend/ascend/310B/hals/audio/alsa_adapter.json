@@ -1,0 +1,10 @@
+{
+    "adapters": [
+        {
+            "name": "primary",
+            "cardId": 0,
+            "cardName": "ascend310b"
+        }
+    ]
+
+}

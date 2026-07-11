@@ -1,0 +1,33 @@
+From 03442cf5c895e538e9a1171f497875555a779607 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Mon, 31 Mar 2025 14:41:18 +0800
+Subject: [PATCH] add OnCameraStatus enum
+
+---
+ services/camera_service/src/hcamera_host_manager.cpp | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/services/camera_service/src/hcamera_host_manager.cpp b/services/camera_service/src/hcamera_host_manager.cpp
+index e5fd768e..d5323150 100644
+--- a/services/camera_service/src/hcamera_host_manager.cpp
++++ b/services/camera_service/src/hcamera_host_manager.cpp
+@@ -505,6 +505,16 @@ int32_t HCameraHostManager::CameraHostInfo::OnCameraStatus(
+             AddDevice(cameraId);
+             break;
+         }
++        case APPEAR: {
++            MEDIA_INFO_LOG("CameraHostInfo::OnCameraStatus, camera %{public}s APPEAR", cameraId.c_str());
++            svcStatus = CAMERA_STATUS_APPEAR;
++            break;
++        }
++        case DISAPPEAR: {
++            MEDIA_INFO_LOG("CameraHostInfo::OnCameraStatus, camera %{public}s DISAPPEAR", cameraId.c_str());
++            svcStatus = CAMERA_STATUS_DISAPPEAR;
++            break;
++        }
+         default:
+             MEDIA_ERR_LOG("Unknown camera status: %{public}d", status);
+             return CAMERA_UNKNOWN_ERROR;
+-- 
+2.47.1.windows.1
+

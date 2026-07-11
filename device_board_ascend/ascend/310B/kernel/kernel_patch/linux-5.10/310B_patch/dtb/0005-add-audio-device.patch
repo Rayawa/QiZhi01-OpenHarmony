@@ -1,0 +1,44 @@
+From a386df574e1b0ee2bd98c269c67032c3de212941 Mon Sep 17 00:00:00 2001
+From: sangedexiaowu <zhaoxin214@huawei.com>
+Date: Sun, 27 Apr 2025 07:55:15 +0000
+Subject: [PATCH] =?UTF-8?q?dtb=E5=A2=9E=E5=8A=A0=E9=9F=B3=E9=A2=91?=
+ =?UTF-8?q?=E9=A9=B1=E5=8A=A8=E8=AE=BE=E5=A4=87?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../hi1910BL/product/hi1910B-audio.dtsi       | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/dtb/dts/hi1910b/hi1910BL/product/hi1910B-audio.dtsi b/dtb/dts/hi1910b/hi1910BL/product/hi1910B-audio.dtsi
+index 496d0dd..86f62a5 100644
+--- a/dtb/dts/hi1910b/hi1910BL/product/hi1910B-audio.dtsi
++++ b/dtb/dts/hi1910b/hi1910BL/product/hi1910B-audio.dtsi
+@@ -20,3 +20,23 @@ audio: audio {
+ audio-sys {
+         compatible = "hisilicon,hisi-audio-sys";
+ };
++
++sound {
++	compatible = "Ascend,310b-audio-machine";
++	ascend310b,platform = <&ascend310b_platform>;
++	audio-routing =
++		"Headphone", "HP_L",
++		"Headphone", "HP_R",
++		"LINPUT1", "AMIC",
++		"RINPUT1", "AMIC";
++	ascend310b,audio-codec = <&ascend310b_codec>;
++};
++
++ascend310b_codec: ascend310b_codec {
++	compatible = "Ascend,310b-audio-codec";
++};
++
++ascend310b_platform: ascend310b_platform {
++	compatible = "Ascend,310b-audio-platform";
++	ascend310b,audio = <&audio>;
++};
+-- 
+2.25.1
+

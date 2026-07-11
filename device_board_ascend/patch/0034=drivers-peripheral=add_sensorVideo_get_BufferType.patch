@@ -1,0 +1,58 @@
+From 5f9434c1ed7cadf604cf12ac716af00abc87a265 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 11:18:08 +0800
+Subject: [PATCH] add sensorVideo get BufferType
+
+---
+ .../v4l2/src/device_manager/include/sensor_controller.h      | 1 +
+ .../platform/v4l2/src/device_manager/sensor_controller.cpp   | 5 +++++
+ .../platform/v4l2/src/driver_adapter/include/v4l2_dev.h      | 5 +++++
+ 3 files changed, 11 insertions(+)
+
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/include/sensor_controller.h b/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/include/sensor_controller.h
+index e4c140287..a2109c1e5 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/include/sensor_controller.h
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/include/sensor_controller.h
+@@ -48,6 +48,7 @@ public:
+     RetCode GetAbilityMetaData(std::shared_ptr<CameraMetadata> meta);
+     RetCode Flush(int32_t streamId);
+     void SetMemoryType(uint8_t &memType);
++    v4l2_buf_type GetSensorBufferType();
+ 
+ private:
+     RetCode SendSensorMetaData(std::shared_ptr<CameraMetadata> meta);
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/sensor_controller.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/sensor_controller.cpp
+index bbeff8268..6229bb1fc 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/sensor_controller.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/sensor_controller.cpp
+@@ -64,6 +64,11 @@ RetCode SensorController::PowerUp()
+     return rc;
+ }
+ 
++v4l2_buf_type SensorController::GetSensorBufferType()
++{
++    return sensorVideo_->GetBufferType();
++}
++
+ RetCode SensorController::PowerDown()
+ {
+     RetCode rc = RC_OK;
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h
+index c5ff04cc5..872ff02a8 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h
+@@ -99,6 +99,11 @@ public:
+         return tmp_map;
+     }
+ 
++    v4l2_buf_type GetBufferType()
++    {
++        return bufferType_;
++    }
++
+ private:
+     int GetCurrentFd(const std::string& cameraID);
+     void dequeueBuffers();
+-- 
+2.47.1.windows.1
+

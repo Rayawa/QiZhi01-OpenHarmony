@@ -1,0 +1,17 @@
+mesa3d的库编译说明
+
+安装依赖包
+sudo apt-get install -y meson cmake llvm ninja-build pkg-config 
+python3 -m pip install meson==0.62.0
+pip install mako atomic markupsafe
+
+打patch
+cd ~/code/ohos/third_party/mesa3d
+git apply ~/code/ohos/device/soc/ascend/310B/hardware/gpu/0001-display-mesa3d-init.patch
+
+编译
+python ohos/build_ohos64.py ~/code/ohos 310B ~/code/ohos/third_party/mesa3d
+
+拷贝生成的库到ascend 310B对应目录
+./copy.sh
+

@@ -1,0 +1,24 @@
+From b5e59895db6504daac1acd2cc7f6961b2e253b2a Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 10:10:09 +0800
+Subject: [PATCH] add v4l-subdev permission
+
+---
+ ueventd/etc/ueventd.config | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ueventd/etc/ueventd.config b/ueventd/etc/ueventd.config
+index 0fbf84b5..173af42a 100644
+--- a/ueventd/etc/ueventd.config
++++ b/ueventd/etc/ueventd.config
+@@ -78,6 +78,7 @@
+ /dev/ttyACM* 0666 0 0
+ /dev/ttyUSB* 0666 0 0
+ /dev/video* 0777 0 0
++/dev/v4l-subdev* 0777 0 0
+ /dev/btdev* 0660 dsoftbus dsoftbus
+ /dev/block/by-name/misc 0660 update update
+ /dev/block/by-name/bootctrl 0660 update update
+-- 
+2.47.1.windows.1
+

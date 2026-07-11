@@ -1,0 +1,38 @@
+# Copyright (C) 2025 Ascend Open Source Organization .
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("device.gni")
+
+print("310B_group in")
+group("310B_group") {
+  deps = [
+    "cfg:init_configs",
+    "kernel:kernel",
+    "kernel:kernel_driver",
+    "updater:updater_files",
+    "//device/soc/ascend/310B/hardware:hardware_group",
+    "ascendinstall:ascendinstall",
+    "//device/board/ascend/310B/audio_alsa:audio",
+  ]
+   if (is_support_graphic) {
+    deps += [
+      "//device/soc/ascend/310B/hardware/display:display_buffer_model",
+      "//device/soc/ascend/310B/hardware/display:display_composer_model",
+    ]
+  }
+
+  if (is_support_boot_animation) {
+    deps += [ "bootanimation:bootanimation" ]
+  }
+}

@@ -1,0 +1,25 @@
+From 51f0cb4b169b47501b3e0e06983fa88cd09ee341 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 11:28:11 +0800
+Subject: [PATCH] fix v4l2-buf-type V4L2_PIX_FMT_NV12
+
+---
+ .../platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp    | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
+index 3adb1b277..d5a2cd867 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
+@@ -199,7 +199,7 @@ RetCode HosFileFormat::V4L2SetFmt(int fd, DeviceFormat& format)
+     fmt.type = bufType_;
+ 
+     if (bufType_ == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+-        fmt.fmt.pix_mp.pixelformat = format.fmtdesc.pixelformat;
++        fmt.fmt.pix_mp.pixelformat = V4L2_PIX_FMT_NV12;
+         fmt.fmt.pix_mp.width = format.fmtdesc.width;
+         fmt.fmt.pix_mp.height = format.fmtdesc.height;
+         fmt.fmt.pix_mp.field = V4L2_FIELD_INTERLACED;
+-- 
+2.47.1.windows.1
+

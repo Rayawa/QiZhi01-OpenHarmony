@@ -1,0 +1,23 @@
+From 437dfee15029dd349acde8c34f6338263b7a9a54 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 13:18:09 +0800
+Subject: [PATCH] close selinux
+
+---
+ selinux.gni | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/selinux.gni b/selinux.gni
+index 7af87e852..02aaae69e 100644
+--- a/selinux.gni
++++ b/selinux.gni
+@@ -31,5 +31,5 @@ declare_args() {
+ }
+ 
+ declare_args() {
+-  selinux_adapter_enforce = true
++  selinux_adapter_enforce = false
+ }
+-- 
+2.47.1.windows.1
+

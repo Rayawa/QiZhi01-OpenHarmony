@@ -1,0 +1,12 @@
+{
+    "subsystem": "device_310B",
+    "parts": {
+        "device_310B": {
+            "module_list": [
+                "//device/board/ascend/${device_name}:310B_group",
+                "//device/board/ascend/${device_name}/camera/vdi_impl/v4l2:camera_board_vdi_impl"
+            ],
+            "inner_kits": []
+        }
+    }
+}

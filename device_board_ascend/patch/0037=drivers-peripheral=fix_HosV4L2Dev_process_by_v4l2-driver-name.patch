@@ -1,0 +1,70 @@
+From 6e3e6af587a187fb92862f0e15c779a95ed28485 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 13:36:07 +0800
+Subject: [PATCH] fix HosV4L2Dev process by v4l2-driver-name
+
+---
+ .../v4l2/src/driver_adapter/src/v4l2_dev.cpp  | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp
+index b03f2a811..f9431f0d0 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp
+@@ -29,6 +29,9 @@ HosV4L2Dev::~HosV4L2Dev() {}
+ int HosV4L2Dev::GetCurrentFd(const std::string& cameraID)
+ {
+     auto itr = HosV4L2Dev::fdMatch.find(cameraID);
++    if (itr == HosV4L2Dev::fdMatch.end()) {
++        itr = HosV4L2Dev::fdMatch.find(std::string("vin-media"));
++    }
+     if (itr == HosV4L2Dev::fdMatch.end()) {
+         CAMERA_LOGE("error: GetCurrentFd no camera fd\n");
+         return RCERRORFD;
+@@ -40,6 +43,7 @@ int HosV4L2Dev::GetCurrentFd(const std::string& cameraID)
+ RetCode HosV4L2Dev::start(const std::string& cameraID)
+ {
+     std::string devName;
++    std::string tmpCameraId(cameraID);
+     int fd;
+ 
+     CAMERA_LOGI("HosV4L2Dev::start enter %{public}s\n", cameraID.c_str());
+@@ -53,6 +57,12 @@ RetCode HosV4L2Dev::start(const std::string& cameraID)
+     }
+ 
+     auto itr = HosV4L2Dev::deviceMatch.find(cameraID);
++
++    if (itr == HosV4L2Dev::deviceMatch.end()) {
++        itr = HosV4L2Dev::deviceMatch.find(std::string("vin-media"));
++        tmpCameraId = std::string("vin-media");
++    }
++
+     if (itr == HosV4L2Dev::deviceMatch.end()) {
+         CAMERA_LOGE("error:find V4L2 devname fail\n");
+         return RC_ERROR;
+@@ -77,8 +87,8 @@ RetCode HosV4L2Dev::start(const std::string& cameraID)
+     }
+ 
+     std::lock_guard<std::mutex> l(HosV4L2Dev::deviceFdLock_);
+-    HosV4L2Dev::fdMatch.insert(std::make_pair(cameraID, fd));
+-    CAMERA_LOGI("HosV4L2Dev::start out cameraID:%{public}s, devName:%{public}s\n", cameraID.c_str(), devName.c_str());
++    HosV4L2Dev::fdMatch.insert(std::make_pair(tmpCameraId, fd));
++    CAMERA_LOGI("HosV4L2Dev::start out tmpCameraId:%{public}s, devName:%{public}s\n", tmpCameraId.c_str(), devName.c_str());
+     return RC_OK;
+ }
+ 
+@@ -94,6 +104,11 @@ RetCode HosV4L2Dev::stop(const std::string& cameraID)
+     }
+ 
+     auto itr = HosV4L2Dev::fdMatch.find(cameraID);
++
++    if (itr == HosV4L2Dev::fdMatch.end()) {
++        itr = HosV4L2Dev::fdMatch.find(std::string("vin-media"));
++    }
++
+     if (itr == HosV4L2Dev::fdMatch.end()) {
+         CAMERA_LOGE("HosV4L2Dev::stop GetCurrentFd error\n");
+         return RC_ERROR;
+-- 
+2.47.1.windows.1
+

@@ -1,0 +1,244 @@
+From 6c141e4d0cc39429ce49680f8833ad689216abb0 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 22 May 2025 13:49:16 +0800
+Subject: [PATCH] slove multiscreen mouse hide
+
+Change-Id: I1ff394d52f88565fb4c9243c639f06488152c2c3
+---
+ service/BUILD.gn                              |  5 +-
+ .../include/pointer_drawing_manager.h         |  2 +-
+ .../src/input_windows_manager.cpp             | 31 +++++++++----
+ .../src/pointer_drawing_manager.cpp           | 46 +++++++++++--------
+ 4 files changed, 56 insertions(+), 28 deletions(-)
+
+diff --git a/service/BUILD.gn b/service/BUILD.gn
+index dd054b4da..d838f1a62 100644
+--- a/service/BUILD.gn
++++ b/service/BUILD.gn
+@@ -265,7 +265,10 @@ ohos_shared_library("libmmi-server") {
+     "c_utils:utils",
+   ]
+   if (input_feature_pointer_drawing) {
+-    external_deps += [ "window_manager:libwm_lite" ]
++    external_deps += [
++      "window_manager:libdm",
++      "window_manager:libwm",
++    ]
+   }
+ 
+   if (input_ext_feature_magiccursor) {
+diff --git a/service/window_manager/include/pointer_drawing_manager.h b/service/window_manager/include/pointer_drawing_manager.h
+index 5e6f6d0db..fa8a949fa 100644
+--- a/service/window_manager/include/pointer_drawing_manager.h
++++ b/service/window_manager/include/pointer_drawing_manager.h
+@@ -194,7 +194,7 @@ private:
+     bool mouseDisplayState_ { false };
+     bool mouseIconUpdate_ { false };
+     std::shared_ptr<OHOS::Media::PixelMap> userIcon_ { nullptr };
+-    uint64_t screenId_ { 0 };
++    uint64_t displayId_ { 0 };
+     std::shared_ptr<Rosen::RSSurfaceNode> surfaceNode_;
+     std::shared_ptr<Rosen::RSCanvasNode> canvasNode_;
+     int32_t userIconHotSpotX_ { 0 };
+diff --git a/service/window_manager/src/input_windows_manager.cpp b/service/window_manager/src/input_windows_manager.cpp
+index 3a798b1f0..508673561 100644
+--- a/service/window_manager/src/input_windows_manager.cpp
++++ b/service/window_manager/src/input_windows_manager.cpp
+@@ -3798,7 +3798,11 @@ int32_t InputWindowsManager::UpdateTargetPointer(std::shared_ptr<PointerEvent> p
+ 
+ bool InputWindowsManager::IsInsideDisplay(const DisplayInfo& displayInfo, int32_t physicalX, int32_t physicalY)
+ {
+-    return (physicalX >= 0 && physicalX < displayInfo.width) && (physicalY >= 0 && physicalY < displayInfo.height);
++    if (displayInfo.direction == DIRECTION0 || displayInfo.direction == DIRECTION180) {
++        return (physicalX >= 0 && physicalX < displayInfo.width) && (physicalY >= 0 && physicalY < displayInfo.height);
++    }
++
++    return (physicalX >= 0 && physicalX < displayInfo.height) && (physicalY >= 0 && physicalY < displayInfo.width);
+ }
+ 
+ void InputWindowsManager::FindPhysicalDisplay(const DisplayInfo& displayInfo, int32_t& physicalX,
+@@ -3818,13 +3822,24 @@ void InputWindowsManager::FindPhysicalDisplay(const DisplayInfo& displayInfo, in
+     for (const auto &item : displayGroupInfo_.displaysInfo) {
+         int32_t displayMaxX = 0;
+         int32_t displayMaxY = 0;
+-        if (!AddInt32(item.x, item.width, displayMaxX)) {
+-            MMI_HILOGE("The addition of displayMaxX overflows");
+-            return;
+-        }
+-        if (!AddInt32(item.y, item.height, displayMaxY)) {
+-            MMI_HILOGE("The addition of displayMaxY overflows");
+-            return;
++        if (item.direction == DIRECTION0 || item.direction == DIRECTION180) {
++            if (!AddInt32(item.x, item.width, displayMaxX)) {
++                MMI_HILOGE("The addition of displayMaxX overflows");
++                return;
++            }
++            if (!AddInt32(item.y, item.height, displayMaxY)) {
++                MMI_HILOGE("The addition of displayMaxY overflows");
++                return;
++            }
++        } else {
++            if (!AddInt32(item.x, item.height, displayMaxX)) {
++                MMI_HILOGE("The addition of displayMaxX overflows");
++                return;
++            }
++            if (!AddInt32(item.y, item.width, displayMaxY)) {
++                MMI_HILOGE("The addition of displayMaxY overflows");
++                return;
++            }
+         }
+         if ((logicalX >= item.x && logicalX < displayMaxX) &&
+             (logicalY >= item.y && logicalY < displayMaxY)) {
+diff --git a/service/window_manager/src/pointer_drawing_manager.cpp b/service/window_manager/src/pointer_drawing_manager.cpp
+index dcbfa00b9..d20d5ba29 100644
+--- a/service/window_manager/src/pointer_drawing_manager.cpp
++++ b/service/window_manager/src/pointer_drawing_manager.cpp
+@@ -44,6 +44,7 @@
+ #include "util.h"
+ #include "timer_manager.h"
+ #include "system_ability_definition.h"
++#include "display_manager.h"
+ 
+ #undef MMI_LOG_DOMAIN
+ #define MMI_LOG_DOMAIN MMI_LOG_CURSOR
+@@ -145,7 +146,7 @@ void PointerDrawingManager::DestroyPointerWindow()
+         if (surfaceNode_ != nullptr) {
+             MMI_HILOGI("Pointer window destroy start");
+             g_isRsRemoteDied = false;
+-            surfaceNode_->DetachToDisplay(screenId_);
++            Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+             surfaceNode_ = nullptr;
+             Rosen::RSTransaction::FlushImplicitTransaction();
+             MMI_HILOGI("Pointer window destroy success");
+@@ -204,6 +205,15 @@ int32_t PointerDrawingManager::DrawMovePointer(int32_t displayId, int32_t physic
+     if (surfaceNode_ == nullptr) {
+         return RET_ERR;
+     }
++
++    if (displayId_ != static_cast<Rosen::DisplayId>(displayId)) {
++        // Move pointer to another display. 'Add' before 'Remove' to avoid the surfaceNode_ to be destroyed by dms.
++        Rosen::DisplayManager::GetInstance().AddSurfaceNodeToDisplay(displayId, surfaceNode_);
++        Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
++        displayId_ = static_cast<Rosen::DisplayId>(displayId);
++    }
++
++    Rosen::RSTransaction::FlushImplicitTransaction();
+     MMI_HILOGD("Pointer window move success, pointerStyle id: %{public}d", pointerStyle.id);
+     if (!SetHardWareLocation(displayId, physicalX, physicalY)) {
+         return RET_ERR;
+@@ -459,7 +469,7 @@ int32_t PointerDrawingManager::CreatePointerSwitchObserver(isMagicCursor& item)
+             MMI_HILOGI("switch pointer style");
+             int64_t nodeId = surfaceNode_->GetId();
+             if (nodeId != MAGIC_CURSOR->GetSurfaceNodeId(nodeId)) {
+-                surfaceNode_->DetachToDisplay(screenId_);
++                Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+                 Rosen::RSTransaction::FlushImplicitTransaction();
+             }
+             MAGIC_CURSOR->DetachDisplayNode();
+@@ -514,7 +524,7 @@ int32_t PointerDrawingManager::DrawCursor(const MOUSE_ICON mouseStyle)
+     sptr<OHOS::Surface> layer = GetLayer();
+     if (layer == nullptr) {
+         MMI_HILOGE("Init layer is failed, Layer is nullptr");
+-        surfaceNode_->DetachToDisplay(screenId_);
++        Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+         surfaceNode_ = nullptr;
+         Rosen::RSTransaction::FlushImplicitTransaction();
+         MMI_HILOGE("Pointer window destroy success");
+@@ -527,7 +537,7 @@ int32_t PointerDrawingManager::DrawCursor(const MOUSE_ICON mouseStyle)
+     sptr<OHOS::SurfaceBuffer> buffer = GetSurfaceBuffer(layer);
+     if (buffer == nullptr || buffer->GetVirAddr() == nullptr) {
+         MMI_HILOGE("Init layer is failed, buffer or virAddr is nullptr");
+-        surfaceNode_->DetachToDisplay(screenId_);
++        Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+         surfaceNode_ = nullptr;
+         Rosen::RSTransaction::FlushImplicitTransaction();
+         MMI_HILOGE("Pointer window destroy success");
+@@ -954,11 +964,11 @@ void PointerDrawingManager::AttachToDisplay()
+     CALL_DEBUG_ENTER;
+     CHKPV(surfaceNode_);
+     if (IsSingleDisplayFoldDevice() && (WIN_MGR->GetDisplayMode() == DisplayMode::MAIN)
+-        && (screenId_ == FOLD_SCREEN_ID_FULL)) {
+-        screenId_ = FOLD_SCREEN_ID_MAIN;
++        && (displayId_ == FOLD_SCREEN_ID_FULL)) {
++        displayId_ = FOLD_SCREEN_ID_MAIN;
+     }
+-    MMI_HILOGI("screenId_: %{public}" PRIu64"", screenId_);
+-    surfaceNode_->AttachToDisplay(screenId_);
++    MMI_HILOGI("PointerDrawingManager::AttachToDisplay displayId_: %{public}" PRIu64"", displayId_);
++    Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+ }
+ 
+ void PointerDrawingManager::CreatePointerWindow(int32_t displayId, int32_t physicalX, int32_t physicalY,
+@@ -991,9 +1001,9 @@ void PointerDrawingManager::CreatePointerWindow(int32_t displayId, int32_t physi
+     surfaceNode_->SetBackgroundColor(Rosen::Drawing::Color::COLOR_TRANSPARENT);
+ #endif
+ 
+-    screenId_ = static_cast<uint64_t>(displayId);
+-    std::cout << "ScreenId: " << screenId_ << std::endl;
+-    AttachToDisplay();
++    displayId_ = static_cast<Rosen::DisplayId>(displayId);
++    MMI_HILOGD("PointerDrawingManager::CreatePointerWindow DisplayId: %{public}" PRIu64 "", displayId_);
++    Rosen::DisplayManager::GetInstance().AddSurfaceNodeToDisplay(displayId_, surfaceNode_);
+     RotateDegree(direction);
+     lastDirection_ = direction;
+ 
+@@ -1495,7 +1505,7 @@ void PointerDrawingManager::OnDisplayInfo(const DisplayGroupInfo &displayGroupIn
+     lastPhysicalY_ = displayGroupInfo.displaysInfo[0].height / CALCULATE_MIDDLE;
+     MouseEventHdr->OnDisplayLost(displayInfo_.id);
+     if (surfaceNode_ != nullptr) {
+-        surfaceNode_->DetachToDisplay(screenId_);
++        Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+         surfaceNode_ = nullptr;
+         Rosen::RSTransaction::FlushImplicitTransaction();
+         MMI_HILOGD("Pointer window destroy success");
+@@ -1533,7 +1543,7 @@ void PointerDrawingManager::UpdatePointerDevice(bool hasPointerDevice, bool isPo
+     DrawManager();
+     if (!hasPointerDevice_ && surfaceNode_ != nullptr) {
+         MMI_HILOGD("Pointer window destroy start");
+-        surfaceNode_->DetachToDisplay(screenId_);
++        Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+         surfaceNode_ = nullptr;
+         Rosen::RSTransaction::FlushImplicitTransaction();
+         MMI_HILOGD("Pointer window destroy success");
+@@ -1546,7 +1556,7 @@ void PointerDrawingManager::DrawManager()
+ #ifdef OHOS_BUILD_ENABLE_MAGICCURSOR
+     if (HasMagicCursor() && lastDrawPointerStyle_.id != currentMouseStyle_.id) {
+         if (surfaceNode_ != nullptr) {
+-            surfaceNode_->DetachToDisplay(screenId_);
++            Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+             surfaceNode_ = nullptr;
+             Rosen::RSTransaction::FlushImplicitTransaction();
+         }
+@@ -1650,7 +1660,7 @@ void PointerDrawingManager::DeletePointerVisible(int32_t pid)
+     MMI_HILOGI("isRsRemoteDied:%{public}d", g_isRsRemoteDied ? 1 : 0);
+     if (g_isRsRemoteDied && surfaceNode_ != nullptr) {
+         g_isRsRemoteDied = false;
+-        surfaceNode_->DetachToDisplay(screenId_);
++        Rosen::DisplayManager::GetInstance().RemoveSurfaceNodeFromDisplay(displayId_, surfaceNode_);
+         surfaceNode_ = nullptr;
+         Rosen::RSTransaction::FlushImplicitTransaction();
+     }
+@@ -1971,7 +1981,7 @@ void PointerDrawingManager::DrawPointerStyle(const PointerStyle& pointerStyle)
+     bool simulate = WIN_MGR->IsMouseSimulate();
+     if (hasDisplay_ && (hasPointerDevice_ || simulate)) {
+         if (surfaceNode_ != nullptr) {
+-            AttachToDisplay();
++            Rosen::DisplayManager::GetInstance().AddSurfaceNodeToDisplay(displayId_, surfaceNode_);
+             Rosen::RSTransaction::FlushImplicitTransaction();
+         }
+         Direction direction = DIRECTION0;
+@@ -2124,9 +2134,9 @@ void PointerDrawingManager::Dump(int32_t fd, const std::vector<std::string> &arg
+     DumpFullTable(oss, "Cursor Info", titles1, data1);
+     oss << std::endl;
+ 
+-    auto titles2 = std::make_tuple("mouseDisplayState", "mouseIconUpdate", "screenId", "userIconHotSpotX",
++    auto titles2 = std::make_tuple("mouseDisplayState", "mouseIconUpdate", "displayId_", "userIconHotSpotX",
+                                    "userIconHotSpotY", "tempPointerColor", "lastDirection", "currentDirection");
+-    auto data2 = std::vector{std::make_tuple(mouseDisplayState_, mouseIconUpdate_, screenId_, userIconHotSpotX_,
++    auto data2 = std::vector{std::make_tuple(mouseDisplayState_, mouseIconUpdate_, displayId_, userIconHotSpotX_,
+                                              userIconHotSpotY_, tempPointerColor_, lastDirection_, currentDirection_)};
+ 
+     DumpFullTable(oss, "Cursor Info", titles2, data2);
+-- 
+2.25.1
+

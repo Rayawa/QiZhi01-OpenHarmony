@@ -1,0 +1,82 @@
+From 148b7e483228344db3a9320b8d03c64967d61c9f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E6=9C=B1=E6=B4=AA=E7=91=9E?= <zhuhongrui8@huawei.com>
+Date: Fri, 28 Mar 2025 13:35:17 +0800
+Subject: [PATCH] set_format_or_UvcCallBack
+
+---
+ .../device_manager/v4l2_device_manager.cpp    | 22 +++++++++----------
+ .../v4l2_source_node/v4l2_source_node.cpp     |  3 +--
+ 2 files changed, 12 insertions(+), 13 deletions(-)
+
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/v4l2_device_manager.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/v4l2_device_manager.cpp
+index 8f91f4691..4e4757e9b 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/v4l2_device_manager.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/device_manager/v4l2_device_manager.cpp
+@@ -293,7 +293,7 @@ std::string V4L2DeviceManager::CameraIdToHardware(CameraId cameraId, ManagerId m
+             return (*iter).hardwareName;
+         }
+     }
+-    return nullptr;
++    return "";
+ }
+ 
+ void V4L2DeviceManager::SetHotplugDevCallBack(HotplugDevCb cb)
+@@ -330,12 +330,8 @@ void V4L2DeviceManager::UvcCallBack(const std::string hardwareName, std::vector<
+     std::vector<DeviceFormat>& deviceFormat, bool uvcState)
+ {
+     if (uvcState) {
+-        if (deviceControl.empty() || deviceFormat.empty()) {
+-            CAMERA_LOGI("V4L2DeviceManager::UvcCallBack %{public}s is empty", hardwareName.c_str());
+-            return;
+-        }
+         CAMERA_LOGI("uvc plug in %{public}s begin", hardwareName.c_str());
+-        CameraId id = ReturnEnableCameraId("");
++        CameraId id = ReturnEnableCameraId(hardwareName);
+         CHECK_IF_EQUAL_RETURN_VOID(id, CAMERA_MAX);
+         RetCode rc = GetManager(DM_M_SENSOR)->CreateController(DM_C_SENSOR, hardwareName);
+         CHECK_IF_EQUAL_RETURN_VOID(rc, RC_ERROR);
+@@ -345,7 +341,14 @@ void V4L2DeviceManager::UvcCallBack(const std::string hardwareName, std::vector<
+             DATA_CAPACITY_SIZE);
+         CHECK_IF_PTR_NULL_RETURN_VOID(meta);
+ 
+-        Convert(deviceControl, deviceFormat, meta);
++        std::vector<float> physicalSize;
++        for (auto iter = deviceFormat.cbegin(); iter != deviceFormat.cend(); iter++) {
++            physicalSize.push_back((*iter).fmtdesc.width);
++            physicalSize.push_back((*iter).fmtdesc.height);
++        }
++        if (physicalSize.size() > 0) {
++            meta->addEntry(OHOS_SENSOR_INFO_PHYSICAL_SIZE, physicalSize.data(), physicalSize.size());
++        }
+         CHECK_IF_PTR_NULL_RETURN_VOID(uvcCb_);
+ 
+         uvcCb_(meta, uvcState, id);
+@@ -366,10 +369,7 @@ void V4L2DeviceManager::UvcCallBack(const std::string hardwareName, std::vector<
+                     std::make_shared<CameraMetadata>(ITEM_CAPACITY_SIZE, DATA_CAPACITY_SIZE);
+                 CHECK_IF_PTR_NULL_RETURN_VOID(meta);
+                 uvcCb_(meta, uvcState, id);
+-            }
+-            {
+-                std::lock_guard<std::mutex> l(mtx_);
+-                iter = hardwareList_.erase(iter);
++                break;
+             }
+         }
+         CAMERA_LOGI("uvc plug out %{public}s end", hardwareName.c_str());
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/pipeline_core/nodes/v4l2_source_node/v4l2_source_node.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/pipeline_core/nodes/v4l2_source_node/v4l2_source_node.cpp
+index 0a8f26463..ec4fd9ec0 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/pipeline_core/nodes/v4l2_source_node/v4l2_source_node.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/pipeline_core/nodes/v4l2_source_node/v4l2_source_node.cpp
+@@ -70,8 +70,7 @@ RetCode V4L2SourceNode::Start(const int32_t streamId)
+     std::vector<std::shared_ptr<IPort>> outPorts = GetOutPorts();
+     for (const auto& it : outPorts) {
+         DeviceFormat format;
+-        format.fmtdesc.pixelformat = V4L2Utils::ConvertPixfmtHal2V4l2(
+-            static_cast<OHOS::Camera::CameraBufferFormat>(it->format_.format_));
++        format.fmtdesc.pixelformat = V4L2_PIX_FMT_YUYV;
+         format.fmtdesc.width = wide_;
+         format.fmtdesc.height = high_;
+         int bufCnt = it->format_.bufferCount_;
+-- 
+2.47.1.windows.1
+

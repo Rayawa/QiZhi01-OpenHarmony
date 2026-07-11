@@ -1,0 +1,29 @@
+From 603d81b5bf0e4242aaa4b48539b34df54518eaa2 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Mon, 31 Mar 2025 14:20:22 +0800
+Subject: [PATCH] modify VdiCameraStatus enum
+
+---
+ camera/vdi_base/interfaces/v1_0/vdi_types.h | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/camera/vdi_base/interfaces/v1_0/vdi_types.h b/camera/vdi_base/interfaces/v1_0/vdi_types.h
+index 410fbd11b..19f5cd9cd 100644
+--- a/camera/vdi_base/interfaces/v1_0/vdi_types.h
++++ b/camera/vdi_base/interfaces/v1_0/vdi_types.h
+@@ -77,8 +77,10 @@ enum VdiStreamSupportType : int32_t {
+ };
+ 
+ enum VdiCameraStatus : int32_t {
+-    UN_AVAILABLE = 0,
+-    AVAILABLE = 1,
++    APPEAR = 0,
++    DISAPPEAR = 1,
++    AVAILABLE = 2,
++    UN_AVAILABLE = 3,
+ };
+ 
+ enum VdiFlashlightStatus : int32_t {
+-- 
+2.47.1.windows.1
+

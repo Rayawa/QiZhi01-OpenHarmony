@@ -1,0 +1,61 @@
+From 1d03253b207966b67b7479c6c64c0628ee90f917 Mon Sep 17 00:00:00 2001
+From: lichao1204 <1140971378@qq.com>
+Date: Sun, 27 Apr 2025 11:46:17 +0800
+Subject: [PATCH] =?UTF-8?q?audio=E4=B8=8B=E6=89=93=E5=BC=80alsa=E7=BC=96?=
+ =?UTF-8?q?=E8=AF=91=E5=BC=80=E5=85=B3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ audio/BUILD.gn    | 5 ++++-
+ audio/audio.gni   | 2 +-
+ audio/bundle.json | 3 ++-
+ 3 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/audio/BUILD.gn b/audio/BUILD.gn
+index db6af3428..410e00247 100644
+--- a/audio/BUILD.gn
++++ b/audio/BUILD.gn
+@@ -20,7 +20,10 @@ group("hdi_audio") {
+   if (defined(ohos_lite)) {
+   } else {
+     if (drivers_peripheral_audio_feature_hdf_proxy_stub == true) {
+-      deps += [ "hal/hdi_binder/server:hdi_audio_a2dp_server" ]
++      deps += [
++        "hal/hdi_binder/server:hdi_audio_a2dp_server",
++        "hdi_service/event:hdi_audio_pnp_server"
++      ]
+     }
+     deps += [ "hdi_service:idl_audio" ]
+   }
+diff --git a/audio/audio.gni b/audio/audio.gni
+index 72c4e5d3a..a6ffbf92f 100644
+--- a/audio/audio.gni
++++ b/audio/audio.gni
+@@ -13,7 +13,7 @@ declare_args() {
+   drivers_peripheral_audio_feature_user_mode = false
+   drivers_peripheral_audio_feature_full_test_suite = false
+   drivers_peripheral_audio_feature_policy_config = true
+-  drivers_peripheral_audio_feature_alsa_lib = false
++  drivers_peripheral_audio_feature_alsa_lib = true
+   drivers_peripheral_audio_feature_rich_device = false
+   drivers_peripheral_audio_feature_community = true
+   drivers_peripheral_audio_feature_effect = false
+diff --git a/audio/bundle.json b/audio/bundle.json
+index 84aabca20..dae473cd0 100755
+--- a/audio/bundle.json
++++ b/audio/bundle.json
+@@ -48,7 +48,8 @@
+             "sub_component": [
+                 "//drivers/peripheral/audio:hdi_audio",
+                 "//drivers/peripheral/audio/effect:effect_model",
+-                "//drivers/peripheral/audio:libaudio_header_static"
++                "//drivers/peripheral/audio:libaudio_header_static",
++                "//third_party/alsa-utils:alsa-utils"
+             ],
+             "inner_kits": [
+                 {
+-- 
+2.47.0.windows.2
+

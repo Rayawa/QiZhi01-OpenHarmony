@@ -1,0 +1,27 @@
+From dbd1f23ca9cdcc6eb2ad27b59a984c572efdf4f2 Mon Sep 17 00:00:00 2001
+From: zhaoxin214 <zhaoxin214@huawei.com>
+Date: Tue, 6 Jan 2026 03:00:52 +0000
+Subject: [PATCH] fix egl function by eglGetProcAddress
+
+---
+ .../innerkitsimpl/egl_image/src/pixel_map_from_surface.cpp    | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/frameworks/innerkitsimpl/egl_image/src/pixel_map_from_surface.cpp b/frameworks/innerkitsimpl/egl_image/src/pixel_map_from_surface.cpp
+index cec04e0a5..1b9fdadcd 100644
+--- a/frameworks/innerkitsimpl/egl_image/src/pixel_map_from_surface.cpp
++++ b/frameworks/innerkitsimpl/egl_image/src/pixel_map_from_surface.cpp
+@@ -26,6 +26,10 @@
+ 
+ namespace OHOS {
+ namespace Media {
++static auto eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(
++        eglGetProcAddress("eglCreateImageKHR"));
++static auto eglDestroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(
++        eglGetProcAddress("eglDestroyImageKHR"));
+ 
+ PixelMapFromSurface::PixelMapFromSurface()
+ {}
+-- 
+2.25.1
+

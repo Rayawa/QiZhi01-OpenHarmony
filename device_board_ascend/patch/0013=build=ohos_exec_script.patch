@@ -1,0 +1,24 @@
+From 46f6b84a5fa96d479f414a1ccbac26795003cbc0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E6=9C=B1=E6=B4=AA=E7=91=9E?= <zhuhongrui8@huawei.com>
+Date: Thu, 27 Mar 2025 15:59:19 +0800
+Subject: [PATCH] ohos_exec_script
+
+---
+ core/gn/ohos_exec_script_allowlist.gni | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/core/gn/ohos_exec_script_allowlist.gni b/core/gn/ohos_exec_script_allowlist.gni
+index 8b97f4a1..4cdd717c 100644
+--- a/core/gn/ohos_exec_script_allowlist.gni
++++ b/core/gn/ohos_exec_script_allowlist.gni
+@@ -62,6 +62,7 @@ ohos_exec_script_config = {
+     "//device/board/bearpi/bearpi_hm_micro/liteos_a/BUILD.gn",
+     "//device/board/hihope/dayu210/camera/vdi_impl/v4l2/BUILD.gn",
+     "//device/board/hihope/rk3568/camera/vdi_impl/v4l2/BUILD.gn",
++    "//device/board/ascend/310B/camera/vdi_impl/v4l2/BUILD.gn",
+     "//device/board/hisilicon/hispark_aries/liteos_a/BUILD.gn",
+     "//device/board/hisilicon/hispark_taurus/camera/BUILD.gn",
+     "//device/board/hisilicon/hispark_taurus/liteos_a/BUILD.gn",
+-- 
+2.47.1.windows.1
+

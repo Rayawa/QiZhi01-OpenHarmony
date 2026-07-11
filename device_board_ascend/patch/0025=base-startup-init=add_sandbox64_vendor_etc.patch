@@ -1,0 +1,34 @@
+From 8de6bff990edba6e99db376b3ed11cff3d6d55e7 Mon Sep 17 00:00:00 2001
+From: lichao1204 <1140971378@qq.com>
+Date: Sun, 27 Apr 2025 15:00:44 +0800
+Subject: [PATCH] =?UTF-8?q?sandbox64=E6=B7=BB=E5=8A=A0/vendor/etc?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ services/sandbox/system-sandbox64.json | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/services/sandbox/system-sandbox64.json b/services/sandbox/system-sandbox64.json
+index bb2c774b..860870f6 100644
+--- a/services/sandbox/system-sandbox64.json
++++ b/services/sandbox/system-sandbox64.json
+@@ -96,6 +96,14 @@
+             "src-path" : "/vendor",
+             "sandbox-path" : "/chipset",
+             "sandbox-flags" : [ "bind", "rec", "private" ]
++        }, {
++            "src-path" : "/vendor/etc",
++            "sandbox-path" : "/vendor/etc",
++            "sandbox-flags" : [ "bind", "rec", "private" ]
++        }, {
++            "src-path" : "/chipset/etc",
++	         "sandbox-path" : "/chipset/etc",
++            "sandbox-flags" : [ "bind", "rec", "private" ]
+         }, {
+             "src-path" : "/chip_prod",
+             "sandbox-path" : "/chip_prod",
+-- 
+2.47.0.windows.2
+

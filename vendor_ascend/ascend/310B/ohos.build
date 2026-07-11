@@ -1,0 +1,17 @@
+{
+  "parts": {
+    "product_310B": {
+      "module_list": [
+        "//vendor/ascend/310B/default_app_config:default_app_config",
+        "//vendor/ascend/310B/image_conf:custom_image_conf",
+        "//vendor/ascend/310B/preinstall-config:preinstall-config",
+	"//vendor/ascend/310B/resourceschedule:resourceschedule",
+        "//vendor/ascend/310B/hdf_config/uhdf:hdf_config",
+        "//vendor/ascend/310B/hals/audio:hdf_audio_config",
+        "//vendor/ascend/310B/etc:product_etc_conf",
+        "//vendor/ascend/310B/window_config:window_config"
+      ]
+    }
+  },
+  "subsystem": "product_310B"
+}

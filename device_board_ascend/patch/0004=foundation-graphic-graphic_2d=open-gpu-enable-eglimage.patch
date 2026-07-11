@@ -1,0 +1,25 @@
+From bc623323fd5b83955ddf7a9e280e7b20388679fd Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 13:44:25 +0800
+Subject: [PATCH] open gpu enable eglimage
+
+---
+ graphic_config.gni | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/graphic_config.gni b/graphic_config.gni
+index 483e7fdefb..2327ffd5de 100644
+--- a/graphic_config.gni
++++ b/graphic_config.gni
+@@ -19,7 +19,7 @@ declare_args() {
+   graphic_2d_feature_bootanimation_enable = true
+   graphic_2d_feature_ace_enable_gpu = true
+   graphic_2d_feature_color_gamut_enable = false
+-  graphic_2d_feature_rs_enable_eglimage = false
++  graphic_2d_feature_rs_enable_eglimage = true
+   graphic_2d_feature_rs_enable_profiler = true
+   graphic_2d_feature_use_texgine = false
+   graphic_2d_feature_rs_enable_uni_render = false
+-- 
+2.47.1.windows.1
+

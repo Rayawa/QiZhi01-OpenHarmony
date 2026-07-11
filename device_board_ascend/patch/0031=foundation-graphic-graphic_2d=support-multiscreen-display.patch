@@ -1,0 +1,869 @@
+From 46341ee82b3fddfe14ec4e93ae8f9ce98ae11802 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 22 May 2025 13:34:57 +0800
+Subject: [PATCH] support multiscreen display
+
+Change-Id: Ic8666365bea1596197bf70c7a74b81ff630edde8
+---
+ .../include/hdi_framebuffer_surface.h         |   9 +-
+ .../src/hdi_framebuffer_surface.cpp           |  22 ++-
+ .../core/pipeline/rs_composer_adapter.cpp     |  15 +-
+ .../core/pipeline/rs_composer_adapter.h       |   2 +
+ .../core/pipeline/rs_divided_render_util.cpp  |   3 +-
+ .../core/pipeline/rs_main_thread.cpp          | 101 ++++++-----
+ .../core/pipeline/rs_main_thread.h            |   8 +-
+ .../pipeline/rs_physical_screen_processor.cpp |  12 +-
+ .../core/pipeline/rs_processor.cpp            |  48 +++++-
+ .../core/pipeline/rs_processor.h              |   3 +
+ .../core/pipeline/rs_render_engine.cpp        |  14 --
+ .../pipeline/rs_render_service_visitor.cpp    | 159 +++++++++++++-----
+ .../core/pipeline/rs_render_service_visitor.h |  12 ++
+ .../include/pipeline/rs_display_render_node.h |  78 ++++++++-
+ .../include/pipeline/rs_surface_render_node.h |   4 +-
+ .../src/pipeline/rs_surface_render_node.cpp   |   4 +-
+ 16 files changed, 368 insertions(+), 126 deletions(-)
+
+diff --git a/rosen/modules/composer/hdi_backend/include/hdi_framebuffer_surface.h b/rosen/modules/composer/hdi_backend/include/hdi_framebuffer_surface.h
+index a3c70c08ba..086be1f3c6 100644
+--- a/rosen/modules/composer/hdi_backend/include/hdi_framebuffer_surface.h
++++ b/rosen/modules/composer/hdi_backend/include/hdi_framebuffer_surface.h
+@@ -39,7 +39,7 @@ struct FrameBufferEntry {
+     Rect damageRect = {0};
+ };
+ 
+-class HdiFramebufferSurface : public IBufferConsumerListener {
++class HdiFramebufferSurface : public RefBase {
+ public:
+     static sptr<HdiFramebufferSurface> CreateFramebufferSurface();
+     sptr<OHOS::Surface> GetSurface();
+@@ -62,9 +62,12 @@ private:
+     HdiFramebufferSurface();
+     virtual ~HdiFramebufferSurface() noexcept;
+ 
+-    void OnBufferAvailable() override;
++    void OnBufferAvailable();
+     OHOS::SurfaceError SetBufferQueueSize(uint32_t bufferSize);
+-    OHOS::SurfaceError CreateSurface(sptr<HdiFramebufferSurface> &fbSurface);
++    OHOS::SurfaceError CreateSurface();
++
++    friend class BufferConsumerListener;
++    sptr<IBufferConsumerListener> listener_;
+ };
+ } // namespace Rosen
+ } // namespace OHOS
+diff --git a/rosen/modules/composer/hdi_backend/src/hdi_framebuffer_surface.cpp b/rosen/modules/composer/hdi_backend/src/hdi_framebuffer_surface.cpp
+index 50a94ee077..714d4c6e7e 100644
+--- a/rosen/modules/composer/hdi_backend/src/hdi_framebuffer_surface.cpp
++++ b/rosen/modules/composer/hdi_backend/src/hdi_framebuffer_surface.cpp
+@@ -22,6 +22,20 @@ using namespace OHOS;
+ 
+ namespace OHOS {
+ namespace Rosen {
++class BufferConsumerListener : public IBufferConsumerListener {
++public:
++    explicit BufferConsumerListener(HdiFramebufferSurface& fbSurface) : fbSurface_(fbSurface) {}
++
++    ~BufferConsumerListener() {}
++
++private:
++    void OnBufferAvailable() override
++    {
++        fbSurface_.OnBufferAvailable();
++    }
++
++    HdiFramebufferSurface& fbSurface_;
++};
+ 
+ HdiFramebufferSurface::HdiFramebufferSurface()
+ {
+@@ -35,7 +49,7 @@ sptr<HdiFramebufferSurface> HdiFramebufferSurface::CreateFramebufferSurface()
+ {
+     sptr<HdiFramebufferSurface> fbSurface = new HdiFramebufferSurface();
+ 
+-    SurfaceError ret = fbSurface->CreateSurface(fbSurface);
++    SurfaceError ret = fbSurface->CreateSurface();
+     if (ret != SURFACE_ERROR_OK) {
+         HLOGE("FramebufferSurface CreateSurface failed, ret is %{public}d", ret);
+         return nullptr;
+@@ -50,7 +64,7 @@ sptr<HdiFramebufferSurface> HdiFramebufferSurface::CreateFramebufferSurface()
+     return fbSurface;
+ }
+ 
+-SurfaceError HdiFramebufferSurface::CreateSurface(sptr<HdiFramebufferSurface> &fbSurface)
++SurfaceError HdiFramebufferSurface::CreateSurface()
+ {
+     consumerSurface_ = IConsumerSurface::Create("FrameBuffer");
+     if (consumerSurface_ == nullptr) {
+@@ -60,8 +74,8 @@ SurfaceError HdiFramebufferSurface::CreateSurface(sptr<HdiFramebufferSurface> &f
+     sptr<IBufferProducer> producer = consumerSurface_->GetProducer();
+     producerSurface_ = Surface::CreateSurfaceAsProducer(producer);
+ 
+-    sptr<IBufferConsumerListener> listener = fbSurface;
+-    SurfaceError ret = consumerSurface_->RegisterConsumerListener(listener);
++    listener_ = new BufferConsumerListener(*this);
++    SurfaceError ret = consumerSurface_->RegisterConsumerListener(listener_);
+     if (ret != SURFACE_ERROR_OK) {
+         return SURFACE_ERROR_NO_CONSUMER;
+     }
+diff --git a/rosen/modules/render_service/core/pipeline/rs_composer_adapter.cpp b/rosen/modules/render_service/core/pipeline/rs_composer_adapter.cpp
+index 5e04894c8c..8e243b49e6 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_composer_adapter.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_composer_adapter.cpp
+@@ -290,14 +290,25 @@ bool RSComposerAdapter::GetComposerInfoNeedClient(const ComposeInfo& info, RSSur
+ // private func, for RSSurfaceRenderNode.
+ ComposeInfo RSComposerAdapter::BuildComposeInfo(RSSurfaceRenderNode& node, bool isTunnelCheck) const
+ {
++    float offsetX = 0.0f;
++    float offsetY = 0.0f;
++    if (mirroredScreenInfo_.id != INVALID_SCREEN_ID) {
++        // align center
++        offsetX =
++            (screenInfo_.GetRotatedWidth() - mirroredScreenInfo_.GetRotatedWidth() * mirrorAdaptiveCoefficient_) / 2.0f;
++        offsetY =
++            (screenInfo_.GetRotatedHeight() - mirroredScreenInfo_.GetRotatedHeight() * mirrorAdaptiveCoefficient_) /
++            2.0f;
++    }
++
+     const auto& dstRect = node.GetDstRect();
+     const auto& srcRect = node.GetSrcRect();
+     ComposeInfo info {};
+     auto surfaceHandler = node.GetRSSurfaceHandler();
+     info.srcRect = GraphicIRect {srcRect.left_, srcRect.top_, srcRect.width_, srcRect.height_};
+     info.dstRect = GraphicIRect {
+-        static_cast<int32_t>(static_cast<float>(dstRect.left_) * mirrorAdaptiveCoefficient_),
+-        static_cast<int32_t>(static_cast<float>(dstRect.top_) * mirrorAdaptiveCoefficient_),
++        static_cast<int32_t>(static_cast<float>(dstRect.left_) * mirrorAdaptiveCoefficient_ + offsetX),
++        static_cast<int32_t>(static_cast<float>(dstRect.top_) * mirrorAdaptiveCoefficient_ + offsetY),
+         static_cast<int32_t>(static_cast<float>(dstRect.width_) * mirrorAdaptiveCoefficient_),
+         static_cast<int32_t>(static_cast<float>(dstRect.height_) * mirrorAdaptiveCoefficient_)
+     };
+diff --git a/rosen/modules/render_service/core/pipeline/rs_composer_adapter.h b/rosen/modules/render_service/core/pipeline/rs_composer_adapter.h
+index 1af45bb973..c87e55bd61 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_composer_adapter.h
++++ b/rosen/modules/render_service/core/pipeline/rs_composer_adapter.h
+@@ -45,6 +45,7 @@ public:
+     /* only used for mock tests */
+     void SetHdiBackendDevice(HdiDevice* device);
+     void SetColorFilterMode(ColorFilterMode colorFilterMode);
++    void SetMirroredScreenInfo(const ScreenInfo& mirroredScreenInfo);
+ 
+ private:
+     // check if the node is out of the screen region.
+@@ -83,6 +84,7 @@ private:
+ 
+     float mirrorAdaptiveCoefficient_ = 1.0f;
+     FallbackCallback fallbackCb_;
++    ScreenInfo mirroredScreenInfo_;
+ };
+ } // namespace Rosen
+ } // namespace OHOS
+diff --git a/rosen/modules/render_service/core/pipeline/rs_divided_render_util.cpp b/rosen/modules/render_service/core/pipeline/rs_divided_render_util.cpp
+index 583b7e5d33..6df343bc8b 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_divided_render_util.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_divided_render_util.cpp
+@@ -100,7 +100,8 @@ void RSDividedRenderUtil::CalculateSurfaceNodeClipRects(
+         params.clipRRect = RRect(localBounds, params.cornerRadius);
+     } else {
+         // in logical screen's coordinate system.
+-        const auto& clipRect = node.GetDstRect();
++        auto clipRect = node.GetDstRect();
++        clipRect = clipRect.Offset(node.GetOffSetX() * -1, node.GetOffSetY() * -1);
+         params.clipRect = Drawing::Rect(clipRect.GetLeft(), clipRect.GetTop(),
+             clipRect.GetWidth() + clipRect.GetLeft(), clipRect.GetHeight() + clipRect.GetTop());
+         params.clipRRect = RRect(absBounds, params.cornerRadius);
+diff --git a/rosen/modules/render_service/core/pipeline/rs_main_thread.cpp b/rosen/modules/render_service/core/pipeline/rs_main_thread.cpp
+index 67b36e38c1..28b483210f 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_main_thread.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_main_thread.cpp
+@@ -2427,8 +2427,39 @@ RSVisibleLevel RSMainThread::GetRegionVisibleLevel(const Occlusion::Region& curR
+     return RSVisibleLevel::RS_SEMI_NONDEFAULT_VISIBLE;
+ }
+ 
+-void RSMainThread::CalcOcclusionImplementation(std::vector<RSBaseRenderNode::SharedPtr>& curAllSurfaces,
+-    VisibleData& dstCurVisVec, std::map<NodeId, RSVisibleLevel>& dstVisMapForVsyncRate)
++RSVisibleLevel RSMainThread::CalcSurfaceNodeVisibleRegion(const std::shared_ptr<RSDisplayRenderNode>& displayNode,
++    const std::shared_ptr<RSSurfaceRenderNode>& surfaceNode,
++    Occlusion::Region& accumulatedRegion, Occlusion::Region& curRegion, Occlusion::Region& totalRegion)
++{
++    if (!surfaceNode) {
++        return RSVisibleLevel::RS_INVISIBLE;
++    }
++
++    if (!isUniRender_) {
++        if (displayNode) {
++            surfaceNode->SetDstRect(displayNode->GetSurfaceDstRect(surfaceNode->GetId()));
++        }
++    }
++
++    Occlusion::Rect occlusionRect = surfaceNode->GetSurfaceOcclusionRect(isUniRender_);
++    curRegion = Occlusion::Region { occlusionRect };
++    Occlusion::Region subRegion = curRegion.Sub(accumulatedRegion);
++
++    RSVisibleLevel visibleLevel = GetRegionVisibleLevel(curRegion, subRegion);
++
++    if (!isUniRender_) {
++        Occlusion::Region visSurface = surfaceNode->GetVisibleRegion();
++        totalRegion = subRegion.Or(visSurface);
++    } else {
++        totalRegion = subRegion;
++    }
++
++    return visibleLevel;
++}
++
++void RSMainThread::CalcOcclusionImplementation(const std::shared_ptr<RSDisplayRenderNode>& displayNode,
++    std::vector<RSBaseRenderNode::SharedPtr>& curAllSurfaces, VisibleData& dstCurVisVec,
++    std::map<NodeId, RSVisibleLevel>& dstVisMapForVsyncRate)
+ {
+     Occlusion::Region accumulatedRegion;
+     VisibleData curVisVec;
+@@ -2436,28 +2467,31 @@ void RSMainThread::CalcOcclusionImplementation(std::vector<RSBaseRenderNode::Sha
+     std::map<NodeId, RSVisibleLevel> visMapForVsyncRate;
+     bool hasFilterCacheOcclusion = false;
+     bool filterCacheOcclusionEnabled = RSSystemParameters::GetFilterCacheOcculusionEnabled();
+-    for (auto it = curAllSurfaces.rbegin(); it != curAllSurfaces.rend(); ++it) {
+-        auto curSurface = RSBaseRenderNode::ReinterpretCast<RSSurfaceRenderNode>(*it);
+-        if (curSurface == nullptr || curSurface->IsLeashWindow()) {
+-            continue;
+-        }
+-        curSurface->SetOcclusionInSpecificScenes(deviceType_ == DeviceType::PC && !threeFingerScenesList_.empty());
+-        Occlusion::Rect occlusionRect = curSurface->GetSurfaceOcclusionRect(isUniRender_);
++    auto calculator = [this, &displayNode, &occlusionSurfaces, &accumulatedRegion, &curVisVec, &visMapForVsyncRate,
++        &hasFilterCacheOcclusion, filterCacheOcclusionEnabled] (std::shared_ptr<RSSurfaceRenderNode>& curSurface,
++        bool needSetVisibleRegion) {
+         curSurface->setQosCal(vsyncControlEnabled_);
+-        if (CheckSurfaceNeedProcess(occlusionSurfaces, curSurface)) {
+-            Occlusion::Region curRegion { occlusionRect };
+-            Occlusion::Region subResult = curRegion.Sub(accumulatedRegion);
+-            RSVisibleLevel visibleLevel = GetRegionVisibleLevel(curRegion, subResult);
+-            RS_LOGD("%{public}s nodeId[%{public}" PRIu64 "] visibleLevel[%{public}d]",
+-                __func__, curSurface->GetId(), visibleLevel);
+-            curSurface->SetVisibleRegionRecursive(subResult, curVisVec, visMapForVsyncRate, true, visibleLevel,
+-                !systemAnimatedScenesList_.empty());
+-            curSurface->AccumulateOcclusionRegion(accumulatedRegion, curRegion, hasFilterCacheOcclusion, isUniRender_,
+-                filterCacheOcclusionEnabled);
+-        } else {
++        if (!CheckSurfaceNeedProcess(occlusionSurfaces, curSurface)) {
+             curSurface->SetVisibleRegionRecursive({}, curVisVec, visMapForVsyncRate);
+-            RS_LOGD("%{public}s nodeId[%{public}" PRIu64 "] visibleLevel[%{public}d]",
+-                __func__, curSurface->GetId(), RSVisibleLevel::RS_INVISIBLE);
++            return;
++        }
++
++        Occlusion::Region curRegion {};
++        Occlusion::Region totalRegion {};
++        auto visibleLevel =
++            CalcSurfaceNodeVisibleRegion(displayNode, curSurface, accumulatedRegion, curRegion, totalRegion);
++
++        curSurface->SetVisibleRegionRecursive(totalRegion, curVisVec, visMapForVsyncRate, needSetVisibleRegion,
++            visibleLevel, !systemAnimatedScenesList_.empty());
++        curSurface->AccumulateOcclusionRegion(
++            accumulatedRegion, curRegion, hasFilterCacheOcclusion, isUniRender_, filterCacheOcclusionEnabled);
++    };
++
++    for (auto it = curAllSurfaces.rbegin(); it != curAllSurfaces.rend(); ++it) {
++        auto curSurface = RSBaseRenderNode::ReinterpretCast<RSSurfaceRenderNode>(*it);
++        if (curSurface && !curSurface->IsLeashWindow()) {
++            curSurface->SetOcclusionInSpecificScenes(deviceType_ == DeviceType::PC && !threeFingerScenesList_.empty());
++            calculator(curSurface, true);
+         }
+     }
+ 
+@@ -2469,21 +2503,8 @@ void RSMainThread::CalcOcclusionImplementation(std::vector<RSBaseRenderNode::Sha
+         accumulatedRegion = {};
+         for (auto it = curAllSurfaces.rbegin(); it != curAllSurfaces.rend(); ++it) {
+             auto curSurface = RSBaseRenderNode::ReinterpretCast<RSSurfaceRenderNode>(*it);
+-            if (curSurface == nullptr || curSurface->IsLeashWindow()) {
+-                continue;
+-            }
+-            Occlusion::Rect occlusionRect = curSurface->GetSurfaceOcclusionRect(isUniRender_);
+-            curSurface->setQosCal(vsyncControlEnabled_);
+-            if (CheckSurfaceNeedProcess(occlusionSurfaces, curSurface)) {
+-                Occlusion::Region curRegion { occlusionRect };
+-                Occlusion::Region subResult = curRegion.Sub(accumulatedRegion);
+-                RSVisibleLevel visibleLevel = GetRegionVisibleLevel(curRegion, subResult);
+-                curSurface->SetVisibleRegionRecursive(subResult, curVisVec, visMapForVsyncRate, false, visibleLevel,
+-                    !systemAnimatedScenesList_.empty());
+-                curSurface->AccumulateOcclusionRegion(accumulatedRegion, curRegion, hasFilterCacheOcclusion,
+-                    isUniRender_, false);
+-            } else {
+-                curSurface->SetVisibleRegionRecursive({}, curVisVec, visMapForVsyncRate, false);
++            if (curSurface && !curSurface->IsLeashWindow()) {
++                calculator(curSurface, false);
+             }
+         }
+     }
+@@ -2505,13 +2526,13 @@ void RSMainThread::CalcOcclusion()
+         RS_LOGE("RSMainThread::CalcOcclusion GetGlobalRootRenderNode fail");
+         return;
+     }
+-    std::map<NodeId, std::vector<RSBaseRenderNode::SharedPtr>> curAllSurfacesInDisplay;
++    std::map<RSDisplayRenderNode::SharedPtr, std::vector<RSBaseRenderNode::SharedPtr>> curAllSurfacesInDisplay;
+     std::vector<RSBaseRenderNode::SharedPtr> curAllSurfaces;
+     for (const auto& child : *node->GetSortedChildren()) {
+         auto displayNode = RSBaseRenderNode::ReinterpretCast<RSDisplayRenderNode>(child);
+         if (displayNode) {
+             const auto& surfaces = displayNode->GetCurAllSurfaces();
+-            curAllSurfacesInDisplay[displayNode->GetId()] = surfaces;
++            curAllSurfacesInDisplay[displayNode] = surfaces;
+             curAllSurfaces.insert(curAllSurfaces.end(), surfaces.begin(), surfaces.end());
+         }
+     }
+@@ -2570,7 +2591,7 @@ void RSMainThread::CalcOcclusion()
+     VisibleData dstCurVisVec;
+     std::map<NodeId, RSVisibleLevel> dstVisMapForVsyncRate;
+     for (auto& surfaces : curAllSurfacesInDisplay) {
+-        CalcOcclusionImplementation(surfaces.second, dstCurVisVec, dstVisMapForVsyncRate);
++        CalcOcclusionImplementation(surfaces.first, surfaces.second, dstCurVisVec, dstVisMapForVsyncRate);
+     }
+ 
+     // Callback to WMS and QOS
+diff --git a/rosen/modules/render_service/core/pipeline/rs_main_thread.h b/rosen/modules/render_service/core/pipeline/rs_main_thread.h
+index c655f356d7..fd91440e32 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_main_thread.h
++++ b/rosen/modules/render_service/core/pipeline/rs_main_thread.h
+@@ -444,8 +444,12 @@ private:
+     void SetDeviceType();
+     void UniRender(std::shared_ptr<RSBaseRenderNode> rootNode);
+     bool CheckSurfaceNeedProcess(OcclusionRectISet& occlusionSurfaces, std::shared_ptr<RSSurfaceRenderNode> curSurface);
+-    void CalcOcclusionImplementation(std::vector<RSBaseRenderNode::SharedPtr>& curAllSurfaces,
+-        VisibleData& dstCurVisVec, std::map<NodeId, RSVisibleLevel>& dstPidVisMap);
++    RSVisibleLevel CalcSurfaceNodeVisibleRegion(const std::shared_ptr<RSDisplayRenderNode>& displayNode,
++        const std::shared_ptr<RSSurfaceRenderNode>& surfaceNode, Occlusion::Region& accumulatedRegion,
++        Occlusion::Region& curRegion, Occlusion::Region& totalRegion);
++    void CalcOcclusionImplementation(const std::shared_ptr<RSDisplayRenderNode>& displayNode,
++        std::vector<RSBaseRenderNode::SharedPtr>& curAllSurfaces, VisibleData& dstCurVisVec,
++        std::map<NodeId, RSVisibleLevel>& dstPidVisMap);
+     void CalcOcclusion();
+     bool CheckSurfaceVisChanged(std::map<NodeId, RSVisibleLevel>& pidVisMap,
+         std::vector<RSBaseRenderNode::SharedPtr>& curAllSurfaces);
+diff --git a/rosen/modules/render_service/core/pipeline/rs_physical_screen_processor.cpp b/rosen/modules/render_service/core/pipeline/rs_physical_screen_processor.cpp
+index d07fe5fdf6..530f2d0d08 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_physical_screen_processor.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_physical_screen_processor.cpp
+@@ -39,10 +39,6 @@ bool RSPhysicalScreenProcessor::Init(RSDisplayRenderNode& node, int32_t offsetX,
+         return false;
+     }
+ 
+-    if (mirroredId != INVALID_SCREEN_ID) {
+-        SetMirrorScreenSwap(node);
+-    }
+-
+     return composerAdapter_->Init(screenInfo_, offsetX, offsetY, mirrorAdaptiveCoefficient_,
+         [this](const auto& surface, const auto& layers) { Redraw(surface, layers); });
+ }
+@@ -99,7 +95,13 @@ void RSPhysicalScreenProcessor::Redraw(const sptr<Surface>& surface, const std::
+         RS_LOGE("RsDebug RSPhysicalScreenProcessor::Redraw: canvas is nullptr.");
+         return;
+     }
+-    canvas->ConcatMatrix(screenTransformMatrix_);
++
++    if (mirroredScreenInfo_.id != INVALID_SCREEN_ID) {
++        canvas->ConcatMatrix(mirrorAdaptiveMatrix_);
++    } else {
++        canvas->ConcatMatrix(screenTransformMatrix_);
++    }
++
+     renderEngine_->DrawLayers(*canvas, layers, forceCPU);
+     renderFrame->Flush();
+     RS_LOGD("RsDebug RSPhysicalScreenProcessor::Redraw flush frame buffer end");
+diff --git a/rosen/modules/render_service/core/pipeline/rs_processor.cpp b/rosen/modules/render_service/core/pipeline/rs_processor.cpp
+index 819247c734..ad868b400a 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_processor.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_processor.cpp
+@@ -181,11 +181,9 @@ bool RSProcessor::Init(RSDisplayRenderNode& node, int32_t offsetX, int32_t offse
+     CalculateScreenTransformMatrix(mirrorNode ? *mirrorNode : node);
+ 
+     if (mirroredId_ != INVALID_SCREEN_ID) {
+-        auto mirroredScreenInfo = screenManager->QueryScreenInfo(mirroredId_);
+-        CalculateMirrorAdaptiveCoefficient(
+-            static_cast<float>(screenInfo_.width), static_cast<float>(screenInfo_.height),
+-            static_cast<float>(mirroredScreenInfo.width), static_cast<float>(mirroredScreenInfo.height)
+-        );
++        mirroredScreenInfo_ = screenManager->QueryScreenInfo(mirroredId_);
++        mirroredScreenInfo_.rotation = mirrorNode->GetRotation();
++        CalculateMirrorAdaptiveMatrix();
+     }
+ 
+     // set default render frame config
+@@ -284,5 +282,45 @@ void RSProcessor::SetDisplayHasSecSurface(bool displayHasSecSurface)
+     displayHasSecSurface_ = displayHasSecSurface;
+ }
+ 
++void RSProcessor::CalculateMirrorAdaptiveMatrix()
++{
++    CalculateMirrorAdaptiveCoefficient(static_cast<float>(screenInfo_.GetRotatedWidth()),
++        static_cast<float>(screenInfo_.GetRotatedHeight()), static_cast<float>(mirroredScreenInfo_.GetRotatedWidth()),
++        static_cast<float>(mirroredScreenInfo_.GetRotatedHeight()));
++
++    float rotation = 0.0f;
++    float offsetX = 0.0f;
++    float offsetY = 0.0f;
++
++    switch (screenInfo_.rotation) {
++        case ScreenRotation::ROTATION_90:
++            rotation = -90.0f;
++            offsetX = screenInfo_.GetRotatedWidth() * -1.0f;
++            break;
++        case ScreenRotation::ROTATION_180:
++            rotation = -180.0f;
++            offsetX = screenInfo_.GetRotatedWidth() * -1.0f;
++            offsetY = screenInfo_.GetRotatedHeight() * -1.0f;
++            break;
++        case ScreenRotation::ROTATION_270:
++            rotation = -270.0f;
++            offsetY = screenInfo_.GetRotatedHeight() * -1.0f;
++            break;
++        default:
++            break;
++    }
++
++    // align center
++    offsetX +=
++        (screenInfo_.GetRotatedWidth() - mirroredScreenInfo_.GetRotatedWidth() * mirrorAdaptiveCoefficient_) / 2.0f;
++    offsetY +=
++        (screenInfo_.GetRotatedHeight() - mirroredScreenInfo_.GetRotatedHeight() * mirrorAdaptiveCoefficient_) /
++        2.0f;
++
++    mirrorAdaptiveMatrix_.PreRotate(rotation);
++    mirrorAdaptiveMatrix_.PreTranslate(offsetX, offsetY);
++    mirrorAdaptiveMatrix_.PreScale(mirrorAdaptiveCoefficient_, mirrorAdaptiveCoefficient_);
++}
++
+ } // namespace Rosen
+ } // namespace OHOS
+diff --git a/rosen/modules/render_service/core/pipeline/rs_processor.h b/rosen/modules/render_service/core/pipeline/rs_processor.h
+index b71b253da4..10e73552d4 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_processor.h
++++ b/rosen/modules/render_service/core/pipeline/rs_processor.h
+@@ -98,6 +98,7 @@ protected:
+         float mirroredWidth, float mirroredHeight);
+     void CalculateScreenTransformMatrix(const RSDisplayRenderNode& node);
+     void SetMirrorScreenSwap(const RSDisplayRenderNode& node);
++    void CalculateMirrorAdaptiveMatrix();
+ 
+     void MultiLayersPerf(size_t layerNum);
+     void RequestPerf(uint32_t layerLevel, bool onOffTag);
+@@ -109,9 +110,11 @@ protected:
+     int32_t offsetX_ = 0;
+     int32_t offsetY_ = 0;
+     ScreenId mirroredId_ = INVALID_SCREEN_ID;
++    ScreenInfo mirroredScreenInfo_;
+     float mirrorAdaptiveCoefficient_ = 1.0f;
+     std::shared_ptr<RSBaseRenderEngine> renderEngine_;
+     Drawing::Matrix screenTransformMatrix_;
++    Drawing::Matrix mirrorAdaptiveMatrix_;
+     BufferRequestConfig renderFrameConfig_ {};
+     bool isSecurityDisplay_ = false;
+     bool displayHasSecSurface_ = false;
+diff --git a/rosen/modules/render_service/core/pipeline/rs_render_engine.cpp b/rosen/modules/render_service/core/pipeline/rs_render_engine.cpp
+index 6b406b1f7d..62c2fd7a4d 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_render_engine.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_render_engine.cpp
+@@ -184,20 +184,6 @@ void RSRenderEngine::RSSurfaceNodeCommonPostProcess(RSSurfaceRenderNode& node, R
+ void RSRenderEngine::DrawSurfaceNode(RSPaintFilterCanvas& canvas, RSSurfaceRenderNode& node,
+     BufferDrawParam& params)
+ {
+-    const float adaptiveDstWidth = params.dstRect.GetWidth() * mirrorAdaptiveCoefficient_;
+-    const float adaptiveDstHeight = params.dstRect.GetHeight() * mirrorAdaptiveCoefficient_;
+-    params.dstRect = Drawing::Rect(0, 0, adaptiveDstWidth, adaptiveDstHeight);
+-    const float translateX = params.matrix.Get(Drawing::Matrix::Index::TRANS_X) * mirrorAdaptiveCoefficient_;
+-    const float translateY = params.matrix.Get(Drawing::Matrix::Index::TRANS_Y) * mirrorAdaptiveCoefficient_;
+-    params.matrix.Set(Drawing::Matrix::Index::TRANS_X, translateX);
+-    params.matrix.Set(Drawing::Matrix::Index::TRANS_Y, translateY);
+-    const auto& clipRect = params.clipRect;
+-    auto clipLeft = clipRect.GetLeft() * mirrorAdaptiveCoefficient_;
+-    auto clipTop = clipRect.GetTop() * mirrorAdaptiveCoefficient_;
+-    params.clipRect = Drawing::Rect(
+-        clipLeft, clipTop, clipLeft + clipRect.GetWidth() * mirrorAdaptiveCoefficient_,
+-        clipTop + clipRect.GetHeight() * mirrorAdaptiveCoefficient_);
+-
+     DrawSurfaceNodeWithParams(canvas, node, params, nullptr, nullptr);
+ }
+ 
+diff --git a/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.cpp b/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.cpp
+index ae0c900d81..f1352fecfc 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.cpp
+@@ -69,31 +69,15 @@ void RSRenderServiceVisitor::PrepareDisplayRenderNode(RSDisplayRenderNode& node)
+     offsetX_ = node.GetDisplayOffsetX();
+     offsetY_ = node.GetDisplayOffsetY();
+     ScreenInfo curScreenInfo = screenManager->QueryScreenInfo(node.GetScreenId());
+-    ScreenState state = curScreenInfo.state;
+-    switch (state) {
+-        case ScreenState::PRODUCER_SURFACE_ENABLE:
+-            node.SetCompositeType(RSDisplayRenderNode::CompositeType::SOFTWARE_COMPOSITE);
+-            break;
+-        case ScreenState::HDI_OUTPUT_ENABLE:
+-            node.SetCompositeType(node.IsForceSoftComposite() ?
+-                RSDisplayRenderNode::CompositeType::SOFTWARE_COMPOSITE:
+-                RSDisplayRenderNode::CompositeType::HARDWARE_COMPOSITE);
+-            break;
+-        default:
+-            RS_LOGE("RSRenderServiceVisitor::PrepareDisplayRenderNode State is unusual");
+-            return;
+-    }
++    UpdateDisplayNodeCompositeType(node, curScreenInfo);
+ 
+-    ScreenRotation rotation = node.GetRotation();
+-    int32_t logicalScreenWidth = static_cast<int32_t>(node.GetRenderProperties().GetFrameWidth());
+-    int32_t logicalScreenHeight = static_cast<int32_t>(node.GetRenderProperties().GetFrameHeight());
+-    if (logicalScreenWidth <= 0 || logicalScreenHeight <= 0) {
+-        logicalScreenWidth = static_cast<int32_t>(curScreenInfo.width);
+-        logicalScreenHeight = static_cast<int32_t>(curScreenInfo.height);
+-        if (rotation == ScreenRotation::ROTATION_90 || rotation == ScreenRotation::ROTATION_270) {
+-            std::swap(logicalScreenWidth, logicalScreenHeight);
+-        }
+-    }
++    ResetSurfaceNodeAttrsInDisplayNode(node);
++
++    curDisplayNode_ = node.shared_from_this()->ReinterpretCastTo<RSDisplayRenderNode>();
++
++    int32_t logicalScreenWidth = 0;
++    int32_t logicalScreenHeight = 0;
++    GetLogicalScreenSize(node, curScreenInfo, logicalScreenWidth, logicalScreenHeight);
+ 
+     if (node.IsMirrorDisplay()) {
+         auto mirrorSource = node.GetMirrorSource();
+@@ -103,19 +87,13 @@ void RSRenderServiceVisitor::PrepareDisplayRenderNode(RSDisplayRenderNode& node)
+             return;
+         }
+         if (mParallelEnable) {
+-            drawingCanvas_ = std::make_unique<Drawing::Canvas>(logicalScreenWidth, logicalScreenHeight);
+-            canvas_ = std::make_shared<RSPaintFilterCanvas>(drawingCanvas_.get());
+-            Drawing::Rect tmpRect(0, 0, logicalScreenWidth, logicalScreenHeight);
+-            canvas_->ClipRect(tmpRect, Drawing::ClipOp::INTERSECT, false);
++            CreateCanvas(logicalScreenWidth, logicalScreenHeight, true);
+         }
+         PrepareChildren(*existingSource);
+     } else {
+         auto& boundsGeoPtr = (node.GetRenderProperties().GetBoundsGeometry());
+         RSBaseRenderUtil::SetNeedClient(boundsGeoPtr && boundsGeoPtr->IsNeedClientCompose());
+-        drawingCanvas_ = std::make_unique<Drawing::Canvas>(logicalScreenWidth, logicalScreenHeight);
+-        canvas_ = std::make_shared<RSPaintFilterCanvas>(drawingCanvas_.get());
+-        Drawing::Rect tmpRect(0, 0, logicalScreenWidth, logicalScreenHeight);
+-        canvas_->ClipRect(tmpRect, Drawing::ClipOp::INTERSECT, false);
++        CreateCanvas(logicalScreenWidth, logicalScreenHeight);
+         PrepareChildren(node);
+     }
+ 
+@@ -149,20 +127,9 @@ void RSRenderServiceVisitor::ProcessDisplayRenderNode(RSDisplayRenderNode& node)
+         screenManager->ForceRefreshOneFrameIfNoRNV();
+         return;
+     }
+-    processor_ = RSProcessorFactory::CreateProcessor(node.GetCompositeType());
+-    if (processor_ == nullptr) {
+-        RS_LOGE("RSRenderServiceVisitor::ProcessDisplayRenderNode: RSProcessor is null!");
+-        return;
+-    }
+-    auto mirrorNode = node.GetMirrorSource().lock();
++    curDisplayNode_ = node.shared_from_this()->ReinterpretCastTo<RSDisplayRenderNode>();
+ 
+-    auto mainThread = RSMainThread::Instance();
+-    if (mainThread != nullptr) {
+-        processorRenderEngine_ = mainThread->GetRenderEngine();
+-    }
+-    if (!processor_->Init(node, node.GetDisplayOffsetX(), node.GetDisplayOffsetY(),
+-        mirrorNode ? mirrorNode->GetScreenId() : INVALID_SCREEN_ID, processorRenderEngine_)) {
+-        RS_LOGE("RSRenderServiceVisitor::ProcessDisplayRenderNode: processor init failed!");
++    if (!CreateProcessor(node)) {
+         return;
+     }
+ 
+@@ -224,8 +191,12 @@ void RSRenderServiceVisitor::PrepareSurfaceRenderNode(RSSurfaceRenderNode& node)
+             node.GetId());
+         return;
+     }
++    node.SetVisibleRegion(Occlusion::Region());
+     node.SetOffset(offsetX_, offsetY_);
+     node.PrepareRenderBeforeChildren(*canvas_);
++    if (curDisplayNode_) {
++        StoreSurfaceNodeAttrsToDisplayNode(*curDisplayNode_, node);
++    }
+     PrepareChildren(node);
+     node.PrepareRenderAfterChildren(*canvas_);
+ }
+@@ -237,6 +208,10 @@ void RSRenderServiceVisitor::ProcessSurfaceRenderNode(RSSurfaceRenderNode& node)
+         return;
+     }
+ 
++    if (curDisplayNode_) {
++        RestoreSurfaceNodeAttrsFromDisplayNode(*curDisplayNode_, node);
++        node.SetOffset(curDisplayNode_->GetDisplayOffsetX(), curDisplayNode_->GetDisplayOffsetY());
++    }
+     if (!node.ShouldPaint()) {
+         RS_LOGD("RSRenderServiceVisitor::ProcessSurfaceRenderNode node : %{public}" PRIu64 " is invisible",
+             node.GetId());
+@@ -277,5 +252,99 @@ void RSRenderServiceVisitor::ProcessSurfaceRenderNode(RSSurfaceRenderNode& node)
+         node.ParallelVisitUnlock();
+     }
+ }
++
++void RSRenderServiceVisitor::CreateCanvas(int32_t width, int32_t height, bool isMirrored)
++{
++    drawingCanvas_ = std::make_unique<Drawing::Canvas>(width, height);
++    canvas_ = std::make_shared<RSPaintFilterCanvas>(drawingCanvas_.get());
++    Drawing::Rect tmpRect(0, 0, width, height);
++    canvas_->ClipRect(tmpRect, Drawing::ClipOp::INTERSECT, false);
++    if (!isMirrored) {
++        Drawing::Matrix matrix;
++        matrix.Translate(offsetX_ * -1, offsetY_ * -1);
++        canvas_->SetMatrix(matrix);
++    }
++}
++
++void RSRenderServiceVisitor::GetLogicalScreenSize(
++    const RSDisplayRenderNode& node, const ScreenInfo& screenInfo, int32_t& width, int32_t& height)
++{
++    ScreenRotation rotation = node.GetRotation();
++    width = static_cast<int32_t>(node.GetRenderProperties().GetFrameWidth());
++    height = static_cast<int32_t>(node.GetRenderProperties().GetFrameHeight());
++    if (width <= 0 || height <= 0) {
++        width = static_cast<int32_t>(screenInfo.width);
++        height = static_cast<int32_t>(screenInfo.height);
++
++        if (rotation == ScreenRotation::ROTATION_90 || rotation == ScreenRotation::ROTATION_270) {
++            std::swap(width, height);
++        }
++    }
++}
++
++bool RSRenderServiceVisitor::CreateProcessor(RSDisplayRenderNode& node)
++{
++    processor_ = RSProcessorFactory::CreateProcessor(node.GetCompositeType());
++    if (processor_ == nullptr) {
++        RS_LOGE("RSRenderServiceVisitor::CreateProcessor: processor_ is null!");
++        return false;
++    }
++
++    auto mirrorNode = node.GetMirrorSource().lock();
++
++    auto mainThread = RSMainThread::Instance();
++    if (mainThread != nullptr) {
++        processorRenderEngine_ = mainThread->GetRenderEngine();
++    }
++
++    if (!processor_->Init(node, node.GetDisplayOffsetX(), node.GetDisplayOffsetY(),
++        mirrorNode ? mirrorNode->GetScreenId() : INVALID_SCREEN_ID, processorRenderEngine_)) {
++        RS_LOGE("RSRenderServiceVisitor::ProcessDisplayRenderNode: processor init failed!");
++        return false;
++    }
++
++    return true;
++}
++
++void RSRenderServiceVisitor::UpdateDisplayNodeCompositeType(RSDisplayRenderNode& node, const ScreenInfo& screenInfo)
++{
++    ScreenState state = screenInfo.state;
++    switch (state) {
++        case ScreenState::PRODUCER_SURFACE_ENABLE:
++            node.SetCompositeType(RSDisplayRenderNode::CompositeType::SOFTWARE_COMPOSITE);
++            break;
++        case ScreenState::HDI_OUTPUT_ENABLE:
++            node.SetCompositeType(node.IsForceSoftComposite() ?
++                RSDisplayRenderNode::CompositeType::SOFTWARE_COMPOSITE:
++                RSDisplayRenderNode::CompositeType::HARDWARE_COMPOSITE);
++            break;
++        default:
++            RS_LOGE("RSRenderServiceVisitor::PrepareDisplayRenderNode State is unusual");
++            return;
++    }
++}
++
++void RSRenderServiceVisitor::StoreSurfaceNodeAttrsToDisplayNode(
++    RSDisplayRenderNode& displayNode, const RSSurfaceRenderNode& surfaceNode)
++{
++    displayNode.SetSurfaceSrcRect(surfaceNode.GetId(), surfaceNode.GetSrcRect());
++    displayNode.SetSurfaceDstRect(surfaceNode.GetId(), surfaceNode.GetDstRect());
++    displayNode.SetSurfaceTotalMatrix(surfaceNode.GetId(), surfaceNode.GetTotalMatrix());
++}
++
++void RSRenderServiceVisitor::RestoreSurfaceNodeAttrsFromDisplayNode(
++    const RSDisplayRenderNode& displayNode, RSSurfaceRenderNode& surfaceNode)
++{
++    surfaceNode.SetSrcRect(displayNode.GetSurfaceSrcRect(surfaceNode.GetId()));
++    surfaceNode.SetDstRect(displayNode.GetSurfaceDstRect(surfaceNode.GetId()));
++    surfaceNode.SetTotalMatrix(displayNode.GetSurfaceTotalMatrix(surfaceNode.GetId()));
++}
++
++void RSRenderServiceVisitor::ResetSurfaceNodeAttrsInDisplayNode(RSDisplayRenderNode& displayNode)
++{
++    displayNode.ClearSurfaceSrcRect();
++    displayNode.ClearSurfaceDstRect();
++    displayNode.ClearSurfaceTotalMatrix();
++}
+ } // namespace Rosen
+ } // namespace OHOS
+diff --git a/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.h b/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.h
+index c9e2e894bb..bc08ba94da 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.h
++++ b/rosen/modules/render_service/core/pipeline/rs_render_service_visitor.h
+@@ -58,6 +58,17 @@ public:
+         return mForceSerial;
+     }
+ 
++private:
++    void CreateCanvas(int32_t width, int32_t height, bool isMirrored = false);
++    void GetLogicalScreenSize(
++        const RSDisplayRenderNode& node, const ScreenInfo& screenInfo, int32_t& width, int32_t& height);
++    bool CreateProcessor(RSDisplayRenderNode& node);
++    void UpdateDisplayNodeCompositeType(RSDisplayRenderNode& node, const ScreenInfo& screenInfo);
++    void StoreSurfaceNodeAttrsToDisplayNode(RSDisplayRenderNode& displayNode, const RSSurfaceRenderNode& surfaceNode);
++    void RestoreSurfaceNodeAttrsFromDisplayNode(
++        const RSDisplayRenderNode& displayNode, RSSurfaceRenderNode& surfaceNode);
++    void ResetSurfaceNodeAttrsInDisplayNode(RSDisplayRenderNode& displayNode);
++
+ private:
+     std::unique_ptr<Drawing::Canvas> drawingCanvas_;
+     std::shared_ptr<RSPaintFilterCanvas> canvas_;
+@@ -73,6 +84,7 @@ private:
+     std::shared_ptr<RSBaseRenderEngine> processorRenderEngine_ = nullptr;
+     bool doAnimate_ = false;
+     std::unordered_map<NodeId, std::vector<std::function<void()>>> foregroundSurfaces_ = {};
++    std::shared_ptr<RSDisplayRenderNode> curDisplayNode_;
+ };
+ } // namespace Rosen
+ } // namespace OHOS
+diff --git a/rosen/modules/render_service_base/include/pipeline/rs_display_render_node.h b/rosen/modules/render_service_base/include/pipeline/rs_display_render_node.h
+index 97f07bbd68..8acf7001c5 100644
+--- a/rosen/modules/render_service_base/include/pipeline/rs_display_render_node.h
++++ b/rosen/modules/render_service_base/include/pipeline/rs_display_render_node.h
+@@ -6,7 +6,7 @@
+  *
+  *     http://www.apache.org/licenses/LICENSE-2.0
+  *
+- * Unless required by applicable law or agreed to in writing, software
++ * Unless required by applicable law or agreed to in writing,bool IsZoomStateChange() const; software
+  * distributed under the License is distributed on an "AS IS" BASIS,
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+@@ -390,6 +390,76 @@ public:
+     void SetWindowContainer(std::shared_ptr<RSBaseRenderNode> container);
+     std::shared_ptr<RSBaseRenderNode> GetWindowContainer() const;
+ 
++    void ClearSurfaceSrcRect()
++    {
++        surfaceSrcRects_.clear();
++    }
++
++    void ClearSurfaceDstRect()
++    {
++        surfaceDstRects_.clear();
++    }
++
++    void ClearSurfaceTotalMatrix()
++    {
++        surfaceTotalMatrix_.clear();
++    }
++
++    void SetSurfaceSrcRect(NodeId id, RectI rect)
++    {
++        surfaceSrcRects_[id] = rect;
++    }
++
++    void SetSurfaceDstRect(NodeId id, RectI rect)
++    {
++        surfaceDstRects_[id] = rect;
++    }
++
++    void SetSurfaceTotalMatrix(NodeId id, const Drawing::Matrix& totalMatrix)
++    {
++        surfaceTotalMatrix_[id] = totalMatrix;
++    }
++
++    RectI GetSurfaceSrcRect(NodeId id) const
++    {
++        auto iter = surfaceSrcRects_.find(id);
++        if (iter == surfaceSrcRects_.cend()) {
++            return RectI();
++        }
++
++        return iter->second;
++    }
++
++    RectI GetSurfaceDstRect(NodeId id) const
++    {
++        auto iter = surfaceDstRects_.find(id);
++        if (iter == surfaceDstRects_.cend()) {
++            return RectI();
++        }
++
++        return iter->second;
++    }
++
++    Drawing::Matrix GetSurfaceTotalMatrix(NodeId id) const
++    {
++
++
++
++        auto iter = surfaceTotalMatrix_.find(id);
++        if (iter == surfaceTotalMatrix_.cend()) {
++            return Drawing::Matrix();
++        }
++
++        return iter->second;
++    }
++
++    const std::vector<NodeId>& GetLastSurfaceIds() const {
++        return lastSurfaceIds_;
++    }
++
++    void SetLastSurfaceIds(std::vector<NodeId> lastSurfaceIds) {
++        lastSurfaceIds_ = std::move(lastSurfaceIds);
++    }
+ protected:
+     void OnSync() override;
+ private:
+@@ -462,6 +532,12 @@ private:
+ 
+     bool curZoomState_ = false;
+     bool preZoomState_ = false;
++    // support multiscreen
++    std::map<NodeId, RectI> surfaceSrcRects_;
++    std::map<NodeId, RectI> surfaceDstRects_;
++    std::map<NodeId, Drawing::Matrix> surfaceTotalMatrix_;
++
++    std::vector<NodeId> lastSurfaceIds_;
+ };
+ } // namespace Rosen
+ } // namespace OHOS
+diff --git a/rosen/modules/render_service_base/include/pipeline/rs_surface_render_node.h b/rosen/modules/render_service_base/include/pipeline/rs_surface_render_node.h
+index 93b415ba01..8c5bdc427d 100644
+--- a/rosen/modules/render_service_base/include/pipeline/rs_surface_render_node.h
++++ b/rosen/modules/render_service_base/include/pipeline/rs_surface_render_node.h
+@@ -407,7 +407,7 @@ public:
+         return surfaceWindowType_;
+     }
+ 
+-    int32_t GetOffSetX()
++    int32_t GetOffSetX() const
+     {
+         return offsetX_;
+     }
+@@ -417,7 +417,7 @@ public:
+         offsetY_ = offset;
+     }
+ 
+-    int32_t GetOffSetY()
++    int32_t GetOffSetY() const
+     {
+         return offsetY_;
+     }
+diff --git a/rosen/modules/render_service_base/src/pipeline/rs_surface_render_node.cpp b/rosen/modules/render_service_base/src/pipeline/rs_surface_render_node.cpp
+index dd652279ad..86d935433d 100644
+--- a/rosen/modules/render_service_base/src/pipeline/rs_surface_render_node.cpp
++++ b/rosen/modules/render_service_base/src/pipeline/rs_surface_render_node.cpp
+@@ -257,8 +257,8 @@ void RSSurfaceRenderNode::PrepareRenderBeforeChildren(RSPaintFilterCanvas& canva
+     // Extract srcDest and dstRect from Drawing::Canvas, localCLipBounds as SrcRect, deviceClipBounds as DstRect
+     auto deviceClipRect = canvas.GetDeviceClipBounds();
+     UpdateSrcRect(canvas, deviceClipRect);
+-    RectI dstRect = {
+-        deviceClipRect.GetLeft(), deviceClipRect.GetTop(), deviceClipRect.GetWidth(), deviceClipRect.GetHeight() };
++    RectI dstRect = { deviceClipRect.GetLeft() + offsetX_, deviceClipRect.GetTop() + offsetY_,
++        deviceClipRect.GetWidth(), deviceClipRect.GetHeight() };
+     SetDstRect(dstRect);
+ 
+     // Save TotalMatrix and GlobalAlpha for compositor
+-- 
+2.25.1
+

@@ -1,0 +1,30 @@
+From 8889a0939ea0be1b99f6e199f65ae9f6ea9fa7de Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 17:02:11 +0800
+Subject: [PATCH] support 8T device
+
+---
+ dtb/dts/hi1910b/hi1910BL/base/hi1910B-emmc.dtsi | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dtb/dts/hi1910b/hi1910BL/base/hi1910B-emmc.dtsi b/dtb/dts/hi1910b/hi1910BL/base/hi1910B-emmc.dtsi
+index 43098e5..108126d 100755
+--- a/dtb/dts/hi1910b/hi1910BL/base/hi1910B-emmc.dtsi
++++ b/dtb/dts/hi1910b/hi1910BL/base/hi1910B-emmc.dtsi
+@@ -47,11 +47,12 @@ sdhci1: sdhci1@82010000 {  // sd
+ 	interrupts = <917 4>;
+ 	bus-width = <4>;
+ 	host_id = <0>;
++	non-removable;
+ 	no-sdio;
+ 	no-mmc;
+ 	max-frequency =<200000000>;
+ 	clock-frequency = <1200000000>;
+-	cd-gpio = <&gpio3 8 0>;
++	//cd-gpio = <&gpio3 8 0>;
+ 	cd-inverted;
+ 	wp-inverted; /*sd卡需要配置这个 否则会被设置为只读*/
+ 	timing_0_cfg = <4000000 0x6 0x6 0x0 0x0 4000000 0 0x23 0x0 0x44 0x42 0x1 0x1 0x2 0x8>;
+-- 
+2.47.1.windows.1
+

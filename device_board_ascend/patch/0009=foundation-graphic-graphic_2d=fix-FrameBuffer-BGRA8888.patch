@@ -1,0 +1,25 @@
+From fa6db07be8d3f01e986b22a54bafe58702248b59 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Mon, 12 May 2025 09:38:05 +0800
+Subject: [PATCH] fix FrameBuffer format BGRA8888
+
+---
+ .../render_service/core/pipeline/rs_base_render_util.cpp        | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/rosen/modules/render_service/core/pipeline/rs_base_render_util.cpp b/rosen/modules/render_service/core/pipeline/rs_base_render_util.cpp
+index ad9116f639..322f24c2fd 100644
+--- a/rosen/modules/render_service/core/pipeline/rs_base_render_util.cpp
++++ b/rosen/modules/render_service/core/pipeline/rs_base_render_util.cpp
+@@ -870,7 +870,7 @@ BufferRequestConfig RSBaseRenderUtil::GetFrameBufferRequestConfig(const ScreenIn
+     config.height = static_cast<int32_t>(height);
+     config.strideAlignment = 0x8; // default stride is 8 Bytes.
+     config.colorGamut = colorGamut;
+-    config.format = pixelFormat;
++    config.format = GRAPHIC_PIXEL_FMT_BGRA_8888;
+     config.usage = BUFFER_USAGE_CPU_READ | BUFFER_USAGE_MEM_DMA | BUFFER_USAGE_MEM_FB;
+     if (isProtected) {
+         config.usage |= BUFFER_USAGE_PROTECTED | BUFFER_USAGE_DRM_REDRAW; // for redraw frameBuffer mem reservation
+-- 
+2.47.1.windows.1
+

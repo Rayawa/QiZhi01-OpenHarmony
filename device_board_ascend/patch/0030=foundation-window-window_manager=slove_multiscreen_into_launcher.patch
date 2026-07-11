@@ -1,0 +1,37 @@
+From deb5528302c72752a4b5656c4dc74aea95936ee6 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 22 May 2025 13:51:11 +0800
+Subject: [PATCH] slove multiscreen into launcher
+
+Change-Id: I8206f67f64357f60e1d6f95bf8cc0bfe75b232cf
+---
+ dmserver/src/abstract_screen_controller.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dmserver/src/abstract_screen_controller.cpp b/dmserver/src/abstract_screen_controller.cpp
+index 2f04ce4560..9ad60d3e79 100644
+--- a/dmserver/src/abstract_screen_controller.cpp
++++ b/dmserver/src/abstract_screen_controller.cpp
+@@ -236,13 +236,18 @@ void AbstractScreenController::RegisterAbstractScreenCallback(sptr<AbstractScree
+ 
+ void AbstractScreenController::OnRsScreenConnectionChange(ScreenId rsScreenId, ScreenEvent screenEvent)
+ {
++    ScreenId defScreenId = rsInterface_.GetDefaultScreenId();
+     WLOGFI("RS screen event. rsScreenId:%{public}" PRIu64", defaultRsScreenId_:%{public}" PRIu64", event:%{public}u",
+         rsScreenId, static_cast<uint64_t>(defaultRsScreenId_), static_cast<uint32_t>(screenEvent));
+     if (screenEvent == ScreenEvent::CONNECTED) {
+         auto task = [this, rsScreenId] {
+             ProcessScreenConnected(rsScreenId);
+         };
+-        controllerHandler_->PostTask(task, "wms:OnRsScreenConnectionChange", 0, AppExecFwk::EventQueue::Priority::HIGH);
++        if (defScreenId == rsScreenId) {
++            controllerHandler_->PostTask(task, "wms:OnRsScreenConnectionChange", 0, AppExecFwk::EventQueue::Priority::HIGH);
++        } else {
++            controllerHandler_->PostTask(task, "wms:OnRsScreenConnectionChange", 200, AppExecFwk::EventQueue::Priority::HIGH);
++        }
+     } else if (screenEvent == ScreenEvent::DISCONNECTED) {
+         auto task = [this, rsScreenId] {
+             ProcessScreenDisconnected(rsScreenId);
+-- 
+2.25.1
+

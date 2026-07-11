@@ -1,0 +1,57 @@
+From 8299d9d9743c5c8062e03be14ba304b097e25cb3 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Mon, 12 May 2025 10:15:42 +0800
+Subject: [PATCH] fix define error
+
+---
+ appdata-sandbox.json   | 10 ++++++++++
+ appdata-sandbox64.json |  5 +++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/appdata-sandbox.json b/appdata-sandbox.json
+index f42187c..0857d85 100644
+--- a/appdata-sandbox.json
++++ b/appdata-sandbox.json
+@@ -48,6 +48,11 @@
+                     "sandbox-path" : "/system/lib",
+                     "sandbox-flags" : [ "bind", "rec" ],
+                     "check-action-status": "false"
++                }, {
++                    "src-path" : "/system/lib64",
++                    "sandbox-path" : "/system/lib64",
++                    "sandbox-flags" : [ "bind", "rec" ],
++                    "check-action-status": "false"
+                 }, {
+                     "src-path" : "/system/data",
+                     "sandbox-path" : "/system/data",
+@@ -480,6 +485,11 @@
+                     "sandbox-path" : "/system/lib",
+                     "sandbox-flags" : [ "bind", "rec" ],
+                     "check-action-status": "false"
++                }, {
++                    "src-path" : "/system/lib64",
++                    "sandbox-path" : "/system/lib64",
++                    "sandbox-flags" : [ "bind", "rec" ],
++                    "check-action-status": "false"
+                 }, {
+                     "src-path" : "/data/service/el1/public/for-all-app",
+                     "sandbox-path" : "/data/service/el1/public/for-all-app",
+diff --git a/appdata-sandbox64.json b/appdata-sandbox64.json
+index afb0ae3..b216da9 100644
+--- a/appdata-sandbox64.json
++++ b/appdata-sandbox64.json
+@@ -24,6 +24,11 @@
+                     "sandbox-path" : "/vendor/asan/lib64",
+                     "sandbox-flags" : [ "bind", "rec" ],
+                     "check-action-status": "false"
++                }, {
++                    "src-path" : "/chip_prod/lib64/passthrough",
++                    "sandbox-path" : "/chip_prod/lib64/passthrough",
++                    "sandbox-flags" : [ "bind", "rec" ],
++                    "check-action-status": "false"
+                 }
+             ],
+             "symbol-links" : [{
+-- 
+2.47.1.windows.1
+

@@ -1,0 +1,239 @@
+From 1a8a02dc19cb5d9ea4d0537072d3831261a92832 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Fri, 3 Jan 2025 16:59:37 +0800
+Subject: [PATCH] add drivers gpu drm panfrost
+
+---
+ drivers/gpu/drm/panfrost/panfrost_device.c | 185 +++++++++++++++++++++
+ drivers/gpu/drm/panfrost/panfrost_device.h |   5 +
+ 2 files changed, 190 insertions(+)
+
+diff --git a/drivers/gpu/drm/panfrost/panfrost_device.c b/drivers/gpu/drm/panfrost/panfrost_device.c
+index c256929e8..5f009e77c 100644
+--- a/drivers/gpu/drm/panfrost/panfrost_device.c
++++ b/drivers/gpu/drm/panfrost/panfrost_device.c
+@@ -16,6 +16,186 @@
+ #include "panfrost_mmu.h"
+ #include "panfrost_perfcnt.h"
+ 
++#define MEDIA_SCHE_REG_ADDE 0x0400100000
++#define MEDIA_SCHE_REG_SIZE 0x10000
++#define SCHE_PORT4_CLAMP_EN 0x0030
++#define SCHE_PORT5_CLAMP_EN 0x0034
++
++#define MEDIA_SUBCTRL_REG_ADDR 0x0400130000
++#define MEDIA_SUBCTRL_REG_SIZE 0x10000
++#define SC_GPU_ICG_EN 0x0618
++
++#define SC_GPU_ICG_DIS 0x061C
++#define SC_GPU_ICG_ST 0x5618
++#define SC_GPU_RESET_DREQ 0x0A8C
++#define SC_GPU_RESET_REQ 0x0A88
++#define SC_GPU_RESET_ST 0x5A88
++
++#define GPU_WRAP_REG_ADDR 0x04010A0000
++#define GPU_WRAP_REG_SIZE 0x10000
++
++typedef union {
++	struct {
++		unsigned int icg_en_gpu :1; /*[0]*/
++		unsigned int rsv :31; /*[31:1]*/
++	}bits;
++ unsigned int u32;
++}sc_gpu_icg_en;
++
++typedef union {
++	struct {
++		unsigned int icg_dis_gpu : 1; /* [0] */
++		unsigned int rsv : 31;        /* [31:1] */
++	}bits;
++	unsigned int u32;
++}sc_gpu_icg_dis;
++
++typedef union {
++	struct {
++		unsigned int icg_st_gpu : 1;/*[0]*/ 
++		unsigned int rsv :31; /* [31:1] */
++	} bits ;
++	unsigned int u32;
++} sc_gpu_icg_st;
++
++typedef union {
++	struct {
++		unsigned int port4_en_clamp : 1;/*[0]*/ 
++		unsigned int rsv : 31; /*[31:1]*/
++	} bits;
++	unsigned int u32;
++} sche_port4_clamp_en ;
++
++typedef union {
++	struct {
++		unsigned int port5_en_clamp : 1; /*[0]*/ 
++		unsigned int rsv :31; /*[1:1]*/
++	} bits;
++	unsigned int u32;
++} sche_port5_clamp_en;
++
++typedef union {
++	struct {
++		unsigned int srst_dreq_gpu :1;	/*[0]*/
++		unsigned int srst_dreq_mbist_gpu :1;/*[1]*/
++		unsigned int rsv :30;	/*[31:2]*/
++	} bits;
++	unsigned int u32;
++} sc_gpu_reset_dreq;
++
++typedef union {
++	struct {
++		unsigned int srst_st_gpu :1; /*[0]*/
++		unsigned int srst_st_mbist_gpu :1; /*[1]*/
++		unsigned int rsv :30; /*[31:2]*/
++	} bits ;
++	unsigned int u32;
++} sc_gpu_reset_st;
++
++typedef union {
++	struct {
++		unsigned int srst_req_gpu :1;
++	} bits ;
++	unsigned int srst_req_mbist_gpu :1;/*[1]*/
++	unsigned int rsv :30;/*[0]*/
++	unsigned int u32;/*[31:2]*/
++} sc_gpu_reset_req ;
++
++/*
++* kmd_common_reg_map_ascend - configure kernel register map 
++* @kbdev : Pointer to linux kbase _ device node 
++*
++*/
++static int32_t kmd_common_reg_map_ascend(struct panfrost_device *pfdev)
++{
++	/* config the register map of media schedule */
++	pfdev->sched_reg = ioremap(MEDIA_SCHE_REG_ADDE, MEDIA_SCHE_REG_SIZE);
++	if (pfdev->sched_reg == NULL)
++		return -ENOMEM;
++
++	/* config the reister map of media subctrl */
++	pfdev->subctrl_reg = ioremap(MEDIA_SUBCTRL_REG_ADDR, MEDIA_SUBCTRL_REG_SIZE);
++	if (pfdev->subctrl_reg == NULL) {
++		iounmap(pfdev->sched_reg);
++		return -ENOMEM;
++	}
++
++	/* config the register map of gpu wrap */
++	pfdev->wrap_reg = ioremap(GPU_WRAP_REG_ADDR, GPU_WRAP_REG_SIZE);
++	if (pfdev->wrap_reg == NULL) {
++		iounmap(pfdev->sched_reg);
++		iounmap(pfdev->subctrl_reg);
++		return -ENOMEM;
++	}
++
++	return 0;
++}
++
++/*
++* kmd_common_reg_unmap_ascend - configure gpu kernel register unmap.
++* @kbdev: Pointer to linux kbase_device node
++*
++*/
++static void kmd_common_reg_unmap_ascend(struct panfrost_device *pfdev)
++{
++	/* unmap gpu register set */
++	if (pfdev->sched_reg != NULL) 
++		iounmap(pfdev->sched_reg);
++
++	if (pfdev->subctrl_reg != NULL)
++		iounmap(pfdev->subctrl_reg);
++
++	if (pfdev->wrap_reg != NULL)
++		iounmap(pfdev->wrap_reg);
++	
++}
++
++static int pm_callback_power_on(struct panfrost_device *pfdev) {
++	
++	sc_gpu_icg_en gpu_icg_en;
++	sc_gpu_icg_st gpu_icg_st;
++
++	sc_gpu_reset_dreq gpu_reset_dreq;
++	sc_gpu_reset_st gpu_reset_st;
++
++
++	
++	sche_port4_clamp_en port4_clamp_en;
++	sche_port5_clamp_en port5_clamp_en;
++
++	/* enable the clock and read the clock state*/
++	/* get the original value of icg enable reg */
++	gpu_icg_en.u32 = readl(pfdev->subctrl_reg + SC_GPU_ICG_EN);
++	gpu_icg_en.bits.icg_en_gpu = 0x01U;
++	writel(gpu_icg_en.u32, pfdev->subctrl_reg + SC_GPU_ICG_EN);
++	/* read the icg state*/
++	gpu_icg_st.u32 = readl(pfdev->subctrl_reg + SC_GPU_ICG_ST);
++	if ((gpu_icg_st.u32 & 0x01U) != 0x1U)
++		return -EFAULT;
++	
++	/* diable the port4 & port5 clamp resgister */
++	/* get the original value of prot4 clamp enable reg */
++	port4_clamp_en.u32 = readl(pfdev->sched_reg + SCHE_PORT4_CLAMP_EN);
++	port4_clamp_en.bits.port4_en_clamp =0x0U;
++	writel(port4_clamp_en.u32, pfdev->sched_reg + SCHE_PORT4_CLAMP_EN);
++	/* get the original value of prot5 clamp enable reg */
++	port5_clamp_en.u32 = readl(pfdev->sched_reg + SCHE_PORT5_CLAMP_EN);
++	port5_clamp_en.bits.port5_en_clamp =0x0U;
++	writel(port5_clamp_en.u32, pfdev->sched_reg + SCHE_PORT5_CLAMP_EN);
++
++	/* gpu reset disable*/	
++	gpu_reset_dreq.u32 = readl(pfdev->subctrl_reg + SC_GPU_RESET_DREQ);
++	gpu_reset_dreq.bits.srst_dreq_gpu = 0x01U;
++	gpu_reset_dreq.bits.srst_dreq_mbist_gpu = 0x01U;
++	writel(gpu_reset_dreq.u32, pfdev->subctrl_reg + SC_GPU_RESET_DREQ);
++	/* read the reset state*/
++	gpu_reset_st.u32 = readl(pfdev->subctrl_reg + SC_GPU_RESET_ST);
++	if ((gpu_reset_st.u32 & 0x03U) != 0x0U)
++		return -EFAULT;
++
++	return 0;
++}
++
+ static int panfrost_reset_init(struct panfrost_device *pfdev)
+ {
+ 	int err;
+@@ -212,6 +392,9 @@ int panfrost_device_init(struct panfrost_device *pfdev)
+ 
+ 	spin_lock_init(&pfdev->as_lock);
+ 
++	kmd_common_reg_map_ascend(pfdev);
++	pm_callback_power_on(pfdev);
++	#if 0
+ 	err = panfrost_clk_init(pfdev);
+ 	if (err) {
+ 		dev_err(pfdev->dev, "clk init failed %d\n", err);
+@@ -232,6 +415,8 @@ int panfrost_device_init(struct panfrost_device *pfdev)
+ 			goto out_devfreq;
+ 	}
+ 
++	#endif
++
+ 	err = panfrost_reset_init(pfdev);
+ 	if (err) {
+ 		dev_err(pfdev->dev, "reset init failed %d\n", err);
+diff --git a/drivers/gpu/drm/panfrost/panfrost_device.h b/drivers/gpu/drm/panfrost/panfrost_device.h
+index 4c6bdea55..6a77985c4 100644
+--- a/drivers/gpu/drm/panfrost/panfrost_device.h
++++ b/drivers/gpu/drm/panfrost/panfrost_device.h
+@@ -81,6 +81,11 @@ struct panfrost_device {
+ 	struct platform_device *pdev;
+ 
+ 	void __iomem *iomem;
++
++	void __iomem *wrap_reg;
++	void __iomem *sched_reg;
++	void __iomem *subctrl_reg;
++
+ 	struct clk *clock;
+ 	struct clk *bus_clock;
+ 	struct regulator_bulk_data *regulators;
+-- 
+2.47.1.windows.1
+

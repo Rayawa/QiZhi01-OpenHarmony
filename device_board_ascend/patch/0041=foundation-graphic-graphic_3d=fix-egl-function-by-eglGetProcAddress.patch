@@ -1,0 +1,26 @@
+From 32bf38299db2d679b2bb754a63ce456e4d0f8fcf Mon Sep 17 00:00:00 2001
+From: zhaoxin214 <zhaoxin214@huawei.com>
+Date: Tue, 6 Jan 2026 02:47:55 +0000
+Subject: [PATCH] fix egl function by eglGetProcAddress
+
+---
+ lume/LumeRender/src/gles/gpu_image_gles.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/lume/LumeRender/src/gles/gpu_image_gles.cpp b/lume/LumeRender/src/gles/gpu_image_gles.cpp
+index 5893cc63..4ad4d11e 100644
+--- a/lume/LumeRender/src/gles/gpu_image_gles.cpp
++++ b/lume/LumeRender/src/gles/gpu_image_gles.cpp
+@@ -32,6 +32,9 @@ using namespace BASE_NS;
+ 
+ RENDER_BEGIN_NAMESPACE()
+ namespace {
++static auto glEGLImageTargetTexture2DOES = reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
++        eglGetProcAddress("glEGLImageTargetTexture2DOES"));
++
+ #if (RENDER_PERF_ENABLED == 1)
+ void RecordAllocation(const int64_t alignedByteSize)
+ {
+-- 
+2.25.1
+

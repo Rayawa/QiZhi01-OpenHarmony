@@ -1,0 +1,16 @@
+运行环境Ubuntu 22.04
+首次运行，执行以下命令
+cp tools/library/* /usr/lib64/
+chmod 777 tools/emmc-head
+
+制卡前准备：
+插上sd卡，fdisk -l查看卡名称
+将生成的镜像放到~/code/ascend-open-harmony-project/device_board_ascend/310BFormatTest/fireware下
+
+制卡命令：
+cd ~/code/ascend-open-harmony-project/device_board_ascend/310BFormatTest
+./formatSD310B.sh /dev/sdX
+
+一次制卡完成后，若只修改了Image、dt.img、system.img、vendor.img、userdata.img、updater.img，可执行firmware下的ddOHImageSd.sh实现单独替换
+例如只替换Image:
+./ddOHImageSd.sh /dev/sdXX Image

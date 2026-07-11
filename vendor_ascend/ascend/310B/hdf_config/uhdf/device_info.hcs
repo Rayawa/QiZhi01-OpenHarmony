@@ -1,0 +1,184 @@
+ root {
+    device_info {
+        match_attr = "hdf_manager";
+        template host {
+            hostName = "";
+            priority = 100;
+            uid = "";
+            gid = [""];
+            caps = [""];
+            critical = [];
+            template device {
+                template deviceNode {
+                    policy = 0;
+                    priority = 100;
+                    preload = 0;
+                    permission = 0664;
+                    moduleName = "";
+                    serviceName = "";
+                    deviceMatchAttr = "";
+                }
+            }
+        }
+        platform :: host {
+            hostName = "sample_host";
+            priority = 50;
+            gid = ["sample_host", "uhdf_driver"];
+            sample_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    preload = 2;
+                    moduleName = "libsample_driver.z.so";
+                    serviceName = "sample_driver_service";
+                }
+                device1 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    preload = 2;
+                    moduleName = "libsample1_driver.z.so";
+                    serviceName = "sample1_driver_service";
+                }
+            }
+        }
+	display_composer :: host {
+            hostName = "composer_host";
+            priority = 40;
+            processPriority = -8;
+            threadPriority = 1;
+            caps = ["SYS_NICE"];
+            uid = ["composer_host"];
+            gid = ["composer_host", "graphics", "vendor_mpp_driver"];
+	        composer_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 160;
+                    moduleName = "libdisplay_composer_driver_1.0.z.so";
+                    serviceName = "display_composer_service";
+                }
+            }
+        }
+        allocator :: host {
+            hostName = "allocator_host";
+            priority = 40;
+            allocator_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 160;
+                    moduleName = "liballocator_driver_1.0.z.so";
+                    serviceName = "allocator_service";
+                }
+            }
+        }
+	pin_auth :: host {
+            hostName = "pin_auth_host";
+            priority = 50;
+            uid = "pin_auth_host";
+            gid = ["pin_auth_host"];
+            pin_auth_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 200;
+                    moduleName = "libpin_auth_driver.z.so";
+                    serviceName = "pin_auth_interface_service";
+                }
+            }
+        }
+        user_auth :: host {
+            hostName = "user_auth_host";
+            priority = 50;
+            uid = "user_auth_host";
+            gid = ["user_auth_host"];
+            user_auth_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 200;
+                    moduleName = "libuser_auth_driver.z.so";
+                    serviceName = "user_auth_interface_service";
+                }
+            }
+        }
+        hdi_server :: host {
+            hostName = "camera_host";
+            priority = 50;
+            gid = ["camera_host", "uhdf_driver", "vendor_mpp_driver"];
+            camera_device :: device {
+                 device0 :: deviceNode {
+                     policy = 2;
+                     priority = 100;
+                     moduleName = "libcamera_host_service_1.0.z.so";
+                     serviceName = "camera_service";
+                 }
+             }
+                display_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 120;
+                    moduleName = "libhdi_media_layer_service.z.so";
+                    serviceName = "hdi_media_layer_service";
+                }
+            }
+        }
+        audio :: host {
+            hostName = "audio_host";
+            priority = 50;
+            gid = ["audio_host", "uhdf_driver", "root", "audio"];
+            audio_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    moduleName = "libhdi_audio_primary_server.z.so";
+                    serviceName = "audio_hdi_service";
+                }
+            }
+            audio_usb_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    moduleName = "libhdi_audio_usb_server.z.so";
+                    serviceName = "audio_hdi_usb_service";
+                }
+            }
+            audio_a2dp_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    moduleName = "libhdi_audio_a2dp_server.z.so";
+                    serviceName = "audio_hdi_a2dp_service";
+                }
+            }
+            audio_pnp_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 110;
+                    moduleName = "libhdi_audio_pnp_server.z.so";
+                    serviceName = "audio_hdi_pnp_service";
+                }
+            }
+            idl_audio_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    moduleName = "libaudio_primary_driver.z.so";
+                    serviceName = "audio_manager_service";
+                }
+            }
+            effect_device :: device {
+                  device0 :: deviceNode {
+                      policy = 2;
+                      priority = 100;
+                      moduleName = "libeffect_model_service.z.so";
+                      serviceName = "effect_model_service";
+                }
+            }
+            trigger_device :: device {
+                device0 :: deviceNode {
+                    policy = 2;
+                    priority = 100;
+                    moduleName = "libintell_voice_trigger_driver.z.so";
+                    serviceName = "intell_voice_trigger_manager_service";
+                }
+            }
+        }      
+    }
+}

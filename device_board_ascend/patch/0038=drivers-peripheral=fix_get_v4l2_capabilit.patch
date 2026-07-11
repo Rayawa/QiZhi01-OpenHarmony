@@ -1,0 +1,53 @@
+From bfdd58456368b2a90b4466cbd58a1da502f06724 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 13:44:55 +0800
+Subject: [PATCH] fix get v4l2 capabilit
+
+---
+ .../v4l2/src/driver_adapter/src/v4l2_fileformat.cpp         | 2 +-
+ .../platform/v4l2/src/driver_adapter/src/v4l2_uvc.cpp       | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
+index 841aee19a..a3d8bcd6a 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
+@@ -133,7 +133,7 @@ RetCode HosFileFormat::V4L2GetCapability(int fd, const std::string& devName, con
+         return RC_ERROR;
+     }
+ 
+-    if (cameraId != std::string(reinterpret_cast<char*>(cap.driver))) {
++    if ((cameraId != std::string(reinterpret_cast<char*>(cap.driver))) && (std::string(reinterpret_cast<char*>(cap.driver)) != std::string("vin-media"))) {
+         return RC_ERROR;
+     }
+ 
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_uvc.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_uvc.cpp
+index 9df851a8f..ea970c701 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_uvc.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_uvc.cpp
+@@ -162,7 +162,7 @@ RetCode HosV4L2UVC::V4L2UvcGetCap(const std::string v4l2Device, struct v4l2_capa
+     }
+     close(fd);
+ 
+-    if (!((cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) && (cap.capabilities & V4L2_CAP_STREAMING))) {
++    if (!(((cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) || (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)) && (cap.capabilities & V4L2_CAP_STREAMING))) {
+         return RC_ERROR;
+     }
+ 
+@@ -179,11 +179,11 @@ RetCode HosV4L2UVC::V4L2UVCGetCapability(int fd, const std::string devName, std:
+         return RC_ERROR;
+     }
+ 
+-    if (!((capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) && (capability.capabilities & V4L2_CAP_STREAMING))) {
++    if (!(((capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) || (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)) && (capability.capabilities & V4L2_CAP_STREAMING))) {
+         return RC_ERROR;
+     }
+ 
+-    if (cameraId != std::string(reinterpret_cast<char*>(capability.driver))) {
++     if ((cameraId != std::string(reinterpret_cast<char*>(capability.driver))) && (std::string(reinterpret_cast<char*>(capability.driver)) != std::string("vin-media"))){
+         return RC_ERROR;
+     }
+     V4L2UvcMatchDev(std::string(reinterpret_cast<char*>(capability.driver)), devName, true);
+-- 
+2.47.1.windows.1
+

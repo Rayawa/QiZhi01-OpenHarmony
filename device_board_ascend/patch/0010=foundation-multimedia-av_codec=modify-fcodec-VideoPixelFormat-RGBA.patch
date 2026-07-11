@@ -1,0 +1,26 @@
+From 5b1738e252b471ebb747771cc322d0fa66ac0e0f Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 13:54:56 +0800
+Subject: [PATCH] modify-fcodec-VideoPixelFormat-RGBA
+
+---
+ services/engine/codec/video/fcodec/fcodec.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/services/engine/codec/video/fcodec/fcodec.cpp b/services/engine/codec/video/fcodec/fcodec.cpp
+index 80c1b404e..44db2f9c6 100644
+--- a/services/engine/codec/video/fcodec/fcodec.cpp
++++ b/services/engine/codec/video/fcodec/fcodec.cpp
+@@ -666,7 +666,8 @@ int32_t FCodec::SetSurfaceCfg(int32_t bufferCnt)
+     CHECK_AND_RETURN_RET_LOG(sInfo_.surface->SetQueueSize(bufferCnt) == OHOS::SurfaceError::SURFACE_ERROR_OK,
+                              AVCS_ERR_NO_MEMORY, "Surface set QueueSize=%{public}d failed", bufferCnt);
+     if (outputPixelFmt_ == VideoPixelFormat::UNKNOWN) {
+-        format_.PutIntValue(MediaDescriptionKey::MD_KEY_PIXEL_FORMAT, static_cast<int32_t>(VideoPixelFormat::NV12));
++        outputPixelFmt_ = VideoPixelFormat::RGBA;
++        format_.PutIntValue(MediaDescriptionKey::MD_KEY_PIXEL_FORMAT, static_cast<int32_t>(outputPixelFmt_));
+     }
+     int32_t val32 = 0;
+     format_.GetIntValue(MediaDescriptionKey::MD_KEY_PIXEL_FORMAT, val32);
+-- 
+2.47.1.windows.1
+

@@ -1,0 +1,24 @@
+From a60bd044c7e92ab67a354aad24df4876d5910d85 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 14:00:37 +0800
+Subject: [PATCH] add bootanimation Wait time
+
+---
+ frameworks/bootanimation/src/boot_animation_controller.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/frameworks/bootanimation/src/boot_animation_controller.cpp b/frameworks/bootanimation/src/boot_animation_controller.cpp
+index 875397bbc4..9b0621f968 100644
+--- a/frameworks/bootanimation/src/boot_animation_controller.cpp
++++ b/frameworks/bootanimation/src/boot_animation_controller.cpp
+@@ -63,6 +63,7 @@ void BootAnimationController::WaitRenderServiceInit() const
+             usleep(SLEEP_TIME_US);
+         } else {
+             LOGI("renderService is initialized");
++            usleep(3000000);
+             isRsInited = true;
+         }
+     }
+-- 
+2.47.1.windows.1
+

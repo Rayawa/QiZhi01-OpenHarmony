@@ -1,0 +1,61 @@
+From 1caf19e60a1a01c3e0ff86b6b9834342983fa74b Mon Sep 17 00:00:00 2001
+From: lichao1204 <1140971378@qq.com>
+Date: Wed, 30 Apr 2025 11:17:12 +0800
+Subject: [PATCH] =?UTF-8?q?alsa=5Fsnd=5Frender.c=E4=BA=A4=E6=8D=A2?=
+ =?UTF-8?q?=E8=AE=BE=E7=BD=AE=E7=A1=AC=E4=BB=B6=E7=BC=93=E5=86=B2=E5=8C=BA?=
+ =?UTF-8?q?=E5=92=8C=E5=91=A8=E6=9C=9F=E7=9A=84=E8=8E=B7=E5=8F=96=E9=A1=BA?=
+ =?UTF-8?q?=E5=BA=8F?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../alsa_adapter/src/alsa_snd_render.c          | 17 ++++++-----------
+ 1 file changed, 6 insertions(+), 11 deletions(-)
+
+diff --git a/audio/supportlibs/alsa_adapter/src/alsa_snd_render.c b/audio/supportlibs/alsa_adapter/src/alsa_snd_render.c
+index f7250fd67..7e9ada85f 100755
+--- a/audio/supportlibs/alsa_adapter/src/alsa_snd_render.c
++++ b/audio/supportlibs/alsa_adapter/src/alsa_snd_render.c
+@@ -90,14 +90,9 @@ static int32_t SetHWParamsSub(
+     CHECK_NULL_PTR_RETURN_DEFAULT(handle);
+     CHECK_NULL_PTR_RETURN_DEFAULT(params);
+ 
+-    /* set hardware resampling,enable alsa-lib resampling */
+-    int32_t ret = snd_pcm_hw_params_set_rate_resample(handle, params, 1);
+-    if (ret < 0) {
+-        AUDIO_FUNC_LOGE("Resampling setup failed for playback: %{public}s", snd_strerror(ret));
+-        return HDF_FAILURE;
+-    }
++
+     /* set the interleaved read/write format */
+-    ret = snd_pcm_hw_params_set_access(handle, params, access);
++    int32_t ret = snd_pcm_hw_params_set_access(handle, params, access);
+     if (ret < 0) {
+         AUDIO_FUNC_LOGE("Access type not available for playback: %{public}s", snd_strerror(ret));
+         return HDF_FAILURE;
+@@ -179,6 +174,10 @@ static int32_t SetHWParams(struct AlsaSoundCard *cardIns, snd_pcm_access_t acces
+         renderIns->bufferTime = AUDIO_BUFFER_TIME_DEF;
+     }
+     renderIns->periodTime = renderIns->bufferTime / AUDIO_PERIOD_TIME_RATIO;
++    if (snd_pcm_hw_params_set_period_time_near(cardIns->pcmHandle, hwParams, &renderIns->periodTime, &dir) < 0) {
++        AUDIO_FUNC_LOGE("Set period time %{public}u failed", renderIns->bufferTime);
++        return HDF_FAILURE;
++    }
+     if (snd_pcm_hw_params_set_buffer_time_near(cardIns->pcmHandle, hwParams, &renderIns->bufferTime, &dir) < 0) {
+         AUDIO_FUNC_LOGE("Set buffer time %{public}u failed", renderIns->bufferTime);
+         return HDF_FAILURE;
+@@ -188,10 +187,6 @@ static int32_t SetHWParams(struct AlsaSoundCard *cardIns, snd_pcm_access_t acces
+         return HDF_FAILURE;
+     }
+     renderIns->bufferSize = size;
+-    if (snd_pcm_hw_params_set_period_time_near(cardIns->pcmHandle, hwParams, &renderIns->periodTime, &dir) < 0) {
+-        AUDIO_FUNC_LOGE("Set period time %{public}u failed", renderIns->bufferTime);
+-        return HDF_FAILURE;
+-    }
+     if (snd_pcm_hw_params_get_period_size(hwParams, &size, &dir) < 0) {
+         AUDIO_FUNC_LOGE("Unable to get period size for playback");
+         return HDF_FAILURE;
+-- 
+2.47.0.windows.2
+

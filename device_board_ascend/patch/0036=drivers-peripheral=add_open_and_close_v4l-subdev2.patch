@@ -1,0 +1,95 @@
+From c7dbdb762decb6fe82e6718cee8cbbb854cd9160 Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Thu, 31 Jul 2025 13:14:45 +0800
+Subject: [PATCH] add open and close v4l-subdev2
+
+---
+ .../v4l2/src/driver_adapter/include/v4l2_dev.h   |  1 +
+ .../src/driver_adapter/include/v4l2_fileformat.h |  2 ++
+ .../v4l2/src/driver_adapter/src/v4l2_dev.cpp     | 10 +++++++++-
+ .../src/driver_adapter/src/v4l2_fileformat.cpp   | 16 ++++++++++++++++
+ 4 files changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h
+index 872ff02a8..8272a049c 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_dev.h
+@@ -128,6 +128,7 @@ private:
+ 
+     enum v4l2_memory memoryType_ = V4L2_MEMORY_MMAP;
+     enum v4l2_buf_type bufferType_ = V4L2_BUF_TYPE_PRIVATE;
++    int subFd = 0;
+ };
+ } // namespace OHOS::Camera
+ #endif // HOS_CAMERA_V4L2_DEV_H
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_fileformat.h b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_fileformat.h
+index b0de97494..9f8603a48 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_fileformat.h
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/include/v4l2_fileformat.h
+@@ -43,6 +43,8 @@ public:
+     RetCode V4L2GetFmtDescs(int fd, std::vector<DeviceFormat>& fmtDesc);
+     int V4L2OpenDevice(const std::string& deviceName);
+     void V4L2CloseDevice(int fd);
++    int V4L2OpenSubDevice();
++    void V4L2CloseSubDevice(int fd);
+     void V4L2MatchDevice(const std::vector<std::string>& cameraIDs);
+     int V4L2SearchBufType(int fd);
+ 
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp
+index fff0d2deb..b03f2a811 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_dev.cpp
+@@ -71,6 +71,11 @@ RetCode HosV4L2Dev::start(const std::string& cameraID)
+         return RC_ERROR;
+     }
+ 
++    if(bufferType_ == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
++    {
++	    subFd = myFileFormat_->V4L2OpenSubDevice();
++    }
++
+     std::lock_guard<std::mutex> l(HosV4L2Dev::deviceFdLock_);
+     HosV4L2Dev::fdMatch.insert(std::make_pair(cameraID, fd));
+     CAMERA_LOGI("HosV4L2Dev::start out cameraID:%{public}s, devName:%{public}s\n", cameraID.c_str(), devName.c_str());
+@@ -101,7 +106,10 @@ RetCode HosV4L2Dev::stop(const std::string& cameraID)
+     }
+ 
+     myFileFormat_->V4L2CloseDevice(fd);
+-
++    if (subFd > 0) {
++        myFileFormat_->V4L2CloseSubDevice(subFd);
++        subFd = 0;
++    }
+     std::lock_guard<std::mutex> l(HosV4L2Dev::deviceFdLock_);
+     HosV4L2Dev::fdMatch.erase(itr);
+     CAMERA_LOGI("HosV4L2Dev::stop out %{public}s\n", cameraID.c_str());
+diff --git a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
+index d5a2cd867..841aee19a 100644
+--- a/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
++++ b/camera/vdi_base/common/adapter/platform/v4l2/src/driver_adapter/src/v4l2_fileformat.cpp
+@@ -330,6 +330,22 @@ int HosFileFormat::V4L2OpenDevice(const std::string& deviceName)
+     return rc;
+ }
+ 
++int HosFileFormat::V4L2OpenSubDevice()
++{
++    int rc = 0;
++    rc = open("/dev/v4l-subdev2",O_RDWR);
++    if (rc < 0) {
++         CAMERA_LOGD("V4L2OpenSubDevice : open subdev failed! : %s\n", strerror(errno));
++		return RCERRORFD;
++    }
++    return rc;
++}
++
++void HosFileFormat::V4L2CloseSubDevice(int fd)
++{
++    close(fd);
++}
++
+ void HosFileFormat::V4L2CloseDevice(int fd)
+ {
+     close(fd);
+-- 
+2.47.1.windows.1
+

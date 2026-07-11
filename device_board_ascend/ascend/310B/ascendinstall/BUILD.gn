@@ -1,0 +1,137 @@
+# Copyright (C) 2025 Ascend Open Source Organization .
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import("//build/ohos.gni")
+
+ASCEND_INSTALL_DIR = "//device/board/ascend/310B/ascendinstall"
+
+ohos_prebuilt_etc("ascend_common_init") {
+  source = "$ASCEND_INSTALL_DIR/ascend_common_init.sh"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("init") {
+  source = "$ASCEND_INSTALL_DIR/init.sh"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("install_dev") {
+  source = "$ASCEND_INSTALL_DIR/install_dev.sh"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("install_filelists") {
+  source = "$ASCEND_INSTALL_DIR/install_filelists.sh"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("libaarch64") {
+  source = "$ASCEND_INSTALL_DIR/libaarch64.tar.gz"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("minirc_sys_init") {
+  source = "$ASCEND_INSTALL_DIR/minirc_sys_init.sh"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("initcfg") {
+  source = "$ASCEND_INSTALL_DIR/init.cfg"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("w73bin1") {
+  source = "$ASCEND_INSTALL_DIR/btc_cali.bin"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("w73bin2") {
+  source = "$ASCEND_INSTALL_DIR/wifi_cali.bin"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("w73bin3") {
+  source = "$ASCEND_INSTALL_DIR/wow.bin"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("w73bin4") {
+  source = "$ASCEND_INSTALL_DIR/ws73.bin"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("w73cfg") {
+  source = "$ASCEND_INSTALL_DIR/ws73_cfg.ini"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("qizhi_test") {
+  source = "$ASCEND_INSTALL_DIR/qizhi_test.tar.gz"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_etc("browser") {
+  source = "$ASCEND_INSTALL_DIR/Browser.hap"
+  module_install_dir = "var/"
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_executable("bash") {
+  source = "bash"
+  install_images = [ "system" ]
+  module_install_dir = "bin"
+  install_enable = true
+  part_name = "device_310B"
+}
+
+ohos_prebuilt_executable("busybox") {
+  source = "busybox"
+  install_images = [ "system" ]
+  module_install_dir = "bin"
+  install_enable = true
+  part_name = "device_310B"
+}
+
+group("ascendinstall") {
+  deps = [
+    ":ascend_common_init",
+    ":init",
+    ":install_dev",
+    ":install_filelists",
+    ":libaarch64",
+    ":minirc_sys_init",
+    ":initcfg",
+    ":w73bin1",
+    ":w73bin2",
+    ":w73bin3",
+    ":w73bin4",
+    ":w73cfg",
+    ":qizhi_test",
+    ":browser",
+    ":bash",
+    ":busybox",
+  ]
+}
+

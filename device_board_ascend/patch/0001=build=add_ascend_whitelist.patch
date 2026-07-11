@@ -1,0 +1,63 @@
+From 9909664787dfb137adc97cf6b033be58338be14e Mon Sep 17 00:00:00 2001
+From: zhaoxin <zhaoxin214@huawei.com>
+Date: Wed, 26 Mar 2025 10:52:47 +0800
+Subject: [PATCH] add_ascend_whitelist
+
+---
+ compile_standard_whitelist.json | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/compile_standard_whitelist.json b/compile_standard_whitelist.json
+index 6a5175cb..ee3c6d84 100644
+--- a/compile_standard_whitelist.json
++++ b/compile_standard_whitelist.json
+@@ -29,6 +29,11 @@
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
++        "//device/soc/ascend/310B/hardware/display:display_gfx",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vendor",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_composer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/mpp/mpp/legacy:librockchip_vpu",
+         "//device/soc/rockchip/rk3568/hardware/omx_il/component/common:libRkOMX_Resourcemanager",
+         "//device/soc/rockchip/rk3568/hardware/omx_il/component/video/dec:libomxvpu_dec",
+@@ -122,6 +127,11 @@
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
++        "//device/soc/ascend/310B/hardware/display:display_gfx",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vendor",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_composer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/mpp/mpp/hdi_mpp:hdi_mpp",
+         "//device/soc/rockchip/rk3568/hardware/mpp/mpp/legacy:librockchip_vpu",
+         "//device/soc/rockchip/rk3568/hardware/mpp/mpp/legacy:rockchip_vpu_src",
+@@ -412,6 +422,12 @@
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vdi_impl",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
++        "//device/soc/ascend/310B/hardware/display:display_gfx",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vendor",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_composer_vdi_impl",
++        "//device/soc/ascend/310B/hardware/display:libhigbm_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libhigbm_vendor",
+         "//device/soc/rockchip/rk3568/hardware/mpp/mpp/hdi_mpp:hdi_mpp",
+         "//device/soc/rockchip/rk3568/hardware/mpp/mpp/legacy:rockchip_vpu_src",
+@@ -462,6 +478,9 @@
+         "//device/soc/rockchip/rk3568/hardware/display:display_composer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libdisplay_buffer_vendor",
+         "//device/soc/rockchip/rk3568/hardware/display:libhigbm_vendor",
++        "//device/soc/ascend/310B/hardware/display:display_composer_vendor",
++        "//device/soc/ascend/310B/hardware/display:libdisplay_buffer_vendor",
++        "//device/soc/ascend/310B/hardware/display:libhigbm_vendor",
+         "//drivers/peripheral/codec/test/demo/adapter:codec_hdi_adapter_decode",
+         "//drivers/peripheral/codec/test/demo/adapter:codec_hdi_adapter_encode",
+         "//drivers/peripheral/codec/test/demo/v2.0:codec_hdi_omx_decode",
+-- 
+2.47.1.windows.1
+
