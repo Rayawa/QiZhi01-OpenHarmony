@@ -1,4 +1,4 @@
-# 310B RC 24.1.RC2 / OpenHarmony 5.0.3 Release
+# QiZhi01-OpenHarmony — 310B RC 24.1.RC2 / OpenHarmony 5.0.3 Release
 
 ## 概述
 
@@ -31,7 +31,7 @@
 ## 目录结构
 
 ```
-Ascend310-OpenHarmony/
+QiZhi01-OpenHarmony/
 │
 ├── README.md                          # 项目说明文档
 ├── build.sh                           # 一键编译脚本（源码下载→合patch→编译→打包）
@@ -181,7 +181,7 @@ cd /opt/ohos/build
 ### 4. 执行一键编译
 
 ```bash
-cd /path/to/Ascend310-OpenHarmony
+cd /path/to/QiZhi01-OpenHarmony
 sudo ./build.sh /opt/ohos
 ```
 
