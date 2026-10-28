@@ -158,6 +158,7 @@ sudo ln -sf /opt/compiler/toolchain/bin/aarch64-target-linux-gnu-* /usr/local/bi
 
 ```bash
 mkdir -p /opt/ohos && cd /opt/ohos
+repo init -u git@gitee.com:openharmony/manifest.git \
   -b refs/tags/OpenHarmony-v5.0.3-Release --no-repo-verify
 repo sync -c
 repo forall -c 'git lfs pull'
